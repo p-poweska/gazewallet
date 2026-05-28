@@ -28,9 +28,8 @@ export async function fetchAddress(address: string): Promise<AddressStats> {
   }
 }
 
-export async function fetchPriceUsd(): Promise<number> {
+export async function fetchPrices(): Promise<Record<string, number>> {
   const res = await fetch(`${BASE}/v1/prices`)
   if (!res.ok) throw new Error(`Błąd API cen (${res.status})`)
-  const d = (await res.json()) as { USD: number }
-  return d.USD
+  return (await res.json()) as Record<string, number>
 }

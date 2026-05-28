@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchPriceUsd } from './lib/api'
-import { fetchWalletBalance, formatBtc, formatUsd } from './lib/wallet'
+import { fetchPrices } from './lib/api'
+import { fetchWalletBalance, formatBtc, formatFiat } from './lib/wallet'
 import {
   exportJson,
   importJson,
@@ -11,12 +11,15 @@ import {
   type WatchEntry,
 } from './lib/store'
 import { ACCENTS, loadAccent, saveAccent } from './lib/theme'
+import { CURRENCIES, loadCurrency, saveCurrency, type Currency } from './lib/currency'
 
 export default function App() {
   const [entries, setEntries] = useState<WatchEntry[]>(() => loadEntries())
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [accent, setAccent] = useState<string>(() => loadAccent())
+  const [currency, setCurrency] = useState<Currency>(() => loadCurrency())
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -28,7 +31,12 @@ export default function App() {
     saveAccent(color)
   }
 
-  const priceQuery = useQuery({ queryKey: ['price'], queryFn: fetchPriceUsd })
+  function changeCurrency(c: Currency) {
+    setCurrency(c)
+    saveCurrency(c)
+  }
+
+  const priceQuery = useQuery({ queryKey: ['prices'], queryFn: fetchPrices })
 
   const balanceQueries = useQueries({
     queries: entries.map((entry) => ({
@@ -41,7 +49,7 @@ export default function App() {
     () => balanceQueries.reduce((sum, q) => sum + (q.data?.balanceSat ?? 0), 0),
     [balanceQueries],
   )
-  const price = priceQuery.data ?? 0
+  const price = priceQuery.data?.[currency] ?? 0
   const loading = balanceQueries.some((q) => q.isLoading)
   const fetching = balanceQueries.some((q) => q.isFetching) || priceQuery.isFetching
   const lastUpdated = useMemo(() => {
@@ -51,7 +59,7 @@ export default function App() {
 
   function refresh() {
     queryClient.invalidateQueries({ queryKey: ['balance'] })
-    queryClient.invalidateQueries({ queryKey: ['price'] })
+    queryClient.invalidateQueries({ queryKey: ['prices'] })
   }
 
   function addEntry() {
@@ -107,26 +115,14 @@ export default function App() {
               <p className="subtitle">Watch-only · dane lokalnie</p>
             </div>
           </div>
-          <div className="accents" role="group" aria-label="Kolor przewodni">
-            {ACCENTS.map((a) => (
-              <button
-                key={a.color}
-                className={`swatch ${accent === a.color ? 'active' : ''}`}
-                style={{ background: a.color }}
-                onClick={() => changeAccent(a.color)}
-                title={a.name}
-                aria-label={a.name}
-              />
-            ))}
-            <label className="swatch custom" title="Własny kolor">
-              <input
-                type="color"
-                value={accent}
-                onChange={(e) => changeAccent(e.target.value)}
-                aria-label="Własny kolor"
-              />
-            </label>
-          </div>
+          <button
+            className="icon-btn"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Ustawienia"
+            title="Ustawienia"
+          >
+            ⚙
+          </button>
         </header>
 
         <section className="hero">
@@ -135,8 +131,10 @@ export default function App() {
             {formatBtc(totalSat)}
             <span className="unit">BTC</span>
           </div>
-          {price > 0 && <div className="hero-fiat">≈ {formatUsd((totalSat / 1e8) * price)}</div>}
-          {price > 0 && <div className="hero-price">1 BTC = {formatUsd(price)}</div>}
+          {price > 0 && (
+            <div className="hero-fiat">≈ {formatFiat((totalSat / 1e8) * price, currency)}</div>
+          )}
+          {price > 0 && <div className="hero-price">1 BTC = {formatFiat(price, currency)}</div>}
           {entries.length > 0 && (
             <div className="hero-refresh">
               {lastUpdated > 0 && (
@@ -175,7 +173,9 @@ export default function App() {
                   <span className="badge">{entry.kind === 'xpub' ? 'XPUB' : 'ADRES'}</span>
                   <code className="value">{entry.value}</code>
                   {q.data && entry.kind === 'xpub' && (
-                    <span className="meta">{q.data.addressCount} adr. · {q.data.txCount} tx</span>
+                    <span className="meta">
+                      {q.data.usedCount} aktywnych adr. · {q.data.txCount} tx
+                    </span>
                   )}
                 </div>
                 <div className="item-right">
@@ -216,6 +216,58 @@ export default function App() {
           </label>
         </footer>
       </main>
+
+      {settingsOpen && (
+        <div className="modal-overlay" onClick={() => setSettingsOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Ustawienia</h2>
+              <button className="icon-btn" onClick={() => setSettingsOpen(false)} aria-label="Zamknij">
+                ✕
+              </button>
+            </div>
+
+            <div className="setting">
+              <span className="setting-label">Kolor przewodni</span>
+              <div className="accents">
+                {ACCENTS.map((a) => (
+                  <button
+                    key={a.color}
+                    className={`swatch ${accent === a.color ? 'active' : ''}`}
+                    style={{ background: a.color }}
+                    onClick={() => changeAccent(a.color)}
+                    title={a.name}
+                    aria-label={a.name}
+                  />
+                ))}
+                <label className="swatch custom" title="Własny kolor">
+                  <input
+                    type="color"
+                    value={accent}
+                    onChange={(e) => changeAccent(e.target.value)}
+                    aria-label="Własny kolor"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="setting">
+              <span className="setting-label">Waluta przeliczenia</span>
+              <select
+                className="select"
+                value={currency}
+                onChange={(e) => changeCurrency(e.target.value as Currency)}
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
