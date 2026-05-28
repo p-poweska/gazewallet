@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchPriceUsd } from './lib/api'
 import { fetchWalletBalance, formatBtc, formatUsd } from './lib/wallet'
 import {
@@ -17,6 +17,7 @@ export default function App() {
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [accent, setAccent] = useState<string>(() => loadAccent())
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     saveEntries(entries)
@@ -42,6 +43,16 @@ export default function App() {
   )
   const price = priceQuery.data ?? 0
   const loading = balanceQueries.some((q) => q.isLoading)
+  const fetching = balanceQueries.some((q) => q.isFetching) || priceQuery.isFetching
+  const lastUpdated = useMemo(() => {
+    const times = balanceQueries.map((q) => q.dataUpdatedAt).filter(Boolean)
+    return times.length ? Math.max(...times) : 0
+  }, [balanceQueries])
+
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: ['balance'] })
+    queryClient.invalidateQueries({ queryKey: ['price'] })
+  }
 
   function addEntry() {
     setError(null)
@@ -126,6 +137,18 @@ export default function App() {
           </div>
           {price > 0 && <div className="hero-fiat">≈ {formatUsd((totalSat / 1e8) * price)}</div>}
           {price > 0 && <div className="hero-price">1 BTC = {formatUsd(price)}</div>}
+          {entries.length > 0 && (
+            <div className="hero-refresh">
+              {lastUpdated > 0 && (
+                <span className="updated">
+                  Aktualizacja {new Date(lastUpdated).toLocaleTimeString('pl-PL')}
+                </span>
+              )}
+              <button className="refresh" onClick={refresh} disabled={fetching}>
+                {fetching ? 'Odświeżanie…' : 'Odśwież'}
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="add">

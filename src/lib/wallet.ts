@@ -6,6 +6,27 @@ import type { WatchEntry } from './store'
 // TODO: pełny gap-limit (skanuj aż 20 kolejnych pustych adresów) zamiast stałego okna.
 const WINDOW = 20
 
+// Maksymalna liczba równoległych żądań do API — chroni przed 429 (burst).
+const CONCURRENCY = 4
+
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const idx = next++
+      results[idx] = await fn(items[idx])
+    }
+  }
+  const workers = Array.from({ length: Math.min(limit, items.length) }, worker)
+  await Promise.all(workers)
+  return results
+}
+
 export function resolveAddresses(entry: WatchEntry): string[] {
   if (entry.kind === 'address') return [entry.value]
   const receive = deriveAddresses(entry.value, { chain: 0, count: WINDOW })
@@ -21,7 +42,7 @@ export interface WalletBalance {
 
 export async function fetchWalletBalance(entry: WatchEntry): Promise<WalletBalance> {
   const addresses = resolveAddresses(entry)
-  const stats = await Promise.all(addresses.map(fetchAddress))
+  const stats = await mapLimit(addresses, CONCURRENCY, fetchAddress)
   return {
     balanceSat: stats.reduce((s, a) => s + a.balanceSat, 0),
     txCount: stats.reduce((s, a) => s + a.txCount, 0),
