@@ -180,14 +180,14 @@ export default function App() {
                 </div>
                 <div className="item-right">
                   <span className="bal">
-                    {q.isLoading ? (
-                      <span className="skeleton" />
+                    {q.data ? (
+                      <>
+                        {formatBtc(q.data.balanceSat)} <span className="unit">BTC</span>
+                      </>
                     ) : q.isError ? (
                       <span className="bal-error">błąd</span>
                     ) : (
-                      <>
-                        {formatBtc(q.data!.balanceSat)} <span className="unit">BTC</span>
-                      </>
+                      <span className="skeleton" />
                     )}
                   </span>
                   <button
