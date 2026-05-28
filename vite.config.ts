@@ -3,6 +3,16 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Dev proxy omija CORS: przeglądarka woła własny origin (/api),
+  // a serwer Vite przekazuje żądanie do mempool.space.
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://mempool.space',
+        changeOrigin: true,
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

@@ -1,7 +1,7 @@
-// Komunikacja z publicznym API mempool.space.
-// PROD/Cloudflare: podmień BASE na własny proxy (Pages Function),
-// żeby mempool.space nie widział IP użytkownika.
-const BASE = 'https://mempool.space/api'
+// Wszystkie zapytania idą do własnego originu (/api), nie wprost do mempool.space.
+// To omija CORS (przeglądarka blokuje cross-origin) i ukrywa IP użytkownika.
+// Dev: proxy serwera Vite. Prod: Cloudflare Pages Function (functions/api).
+const BASE = '/api'
 
 export interface AddressStats {
   address: string

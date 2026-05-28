@@ -10,15 +10,22 @@ import {
   saveEntries,
   type WatchEntry,
 } from './lib/store'
+import { ACCENTS, loadAccent, saveAccent } from './lib/theme'
 
 export default function App() {
   const [entries, setEntries] = useState<WatchEntry[]>(() => loadEntries())
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [accent, setAccent] = useState<string>(() => loadAccent())
 
   useEffect(() => {
     saveEntries(entries)
   }, [entries])
+
+  function changeAccent(color: string) {
+    setAccent(color)
+    saveAccent(color)
+  }
 
   const priceQuery = useQuery({ queryKey: ['price'], queryFn: fetchPriceUsd })
 
@@ -34,6 +41,7 @@ export default function App() {
     [balanceQueries],
   )
   const price = priceQuery.data ?? 0
+  const loading = balanceQueries.some((q) => q.isLoading)
 
   function addEntry() {
     setError(null)
@@ -78,66 +86,113 @@ export default function App() {
   }
 
   return (
-    <main className="app">
-      <header className="header">
-        <h1>gazewallet</h1>
-        <p className="subtitle">Watch-only portfel BTC — dane trzymane lokalnie</p>
-      </header>
+    <div className="page">
+      <main className="app">
+        <header className="header">
+          <div className="brand">
+            <span className="logo" aria-hidden />
+            <div>
+              <h1>gazewallet</h1>
+              <p className="subtitle">Watch-only · dane lokalnie</p>
+            </div>
+          </div>
+          <div className="accents" role="group" aria-label="Kolor przewodni">
+            {ACCENTS.map((a) => (
+              <button
+                key={a.color}
+                className={`swatch ${accent === a.color ? 'active' : ''}`}
+                style={{ background: a.color }}
+                onClick={() => changeAccent(a.color)}
+                title={a.name}
+                aria-label={a.name}
+              />
+            ))}
+            <label className="swatch custom" title="Własny kolor">
+              <input
+                type="color"
+                value={accent}
+                onChange={(e) => changeAccent(e.target.value)}
+                aria-label="Własny kolor"
+              />
+            </label>
+          </div>
+        </header>
 
-      <section className="total">
-        <div className="total-btc">{formatBtc(totalSat)} BTC</div>
-        {price > 0 && <div className="total-fiat">{formatUsd((totalSat / 1e8) * price)}</div>}
-      </section>
+        <section className="hero">
+          <span className="hero-label">Łączne saldo</span>
+          <div className={`hero-btc ${loading ? 'pulse' : ''}`}>
+            {formatBtc(totalSat)}
+            <span className="unit">BTC</span>
+          </div>
+          {price > 0 && <div className="hero-fiat">≈ {formatUsd((totalSat / 1e8) * price)}</div>}
+          {price > 0 && <div className="hero-price">1 BTC = {formatUsd(price)}</div>}
+        </section>
 
-      <section className="add">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addEntry()}
-          placeholder="xpub / ypub / zpub lub adres bc1..."
-          spellCheck={false}
-          autoCapitalize="off"
-        />
-        <button onClick={addEntry}>Dodaj</button>
-      </section>
-      {error && <p className="error">{error}</p>}
+        <section className="add">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addEntry()}
+            placeholder="xpub / ypub / zpub lub adres bc1…"
+            spellCheck={false}
+            autoCapitalize="off"
+          />
+          <button className="primary" onClick={addEntry}>
+            Dodaj
+          </button>
+        </section>
+        {error && <p className="error">{error}</p>}
 
-      <ul className="list">
-        {entries.map((entry, i) => {
-          const q = balanceQueries[i]
-          return (
-            <li key={entry.id} className="item">
-              <div className="item-main">
-                <span className="badge">{entry.kind === 'xpub' ? 'XPUB' : 'ADRES'}</span>
-                <code className="value">{entry.value}</code>
-              </div>
-              <div className="item-right">
-                <span className="bal">
-                  {q.isLoading
-                    ? '…'
-                    : q.isError
-                      ? 'błąd'
-                      : `${formatBtc(q.data!.balanceSat)} BTC`}
-                </span>
-                <button className="remove" onClick={() => removeEntry(entry.id)} aria-label="Usuń">
-                  ✕
-                </button>
-              </div>
-            </li>
-          )
-        })}
-        {entries.length === 0 && <li className="empty">Dodaj XPUB lub adres, aby śledzić saldo.</li>}
-      </ul>
+        <ul className="list">
+          {entries.map((entry, i) => {
+            const q = balanceQueries[i]
+            return (
+              <li key={entry.id} className="item">
+                <div className="item-main">
+                  <span className="badge">{entry.kind === 'xpub' ? 'XPUB' : 'ADRES'}</span>
+                  <code className="value">{entry.value}</code>
+                  {q.data && entry.kind === 'xpub' && (
+                    <span className="meta">{q.data.addressCount} adr. · {q.data.txCount} tx</span>
+                  )}
+                </div>
+                <div className="item-right">
+                  <span className="bal">
+                    {q.isLoading ? (
+                      <span className="skeleton" />
+                    ) : q.isError ? (
+                      <span className="bal-error">błąd</span>
+                    ) : (
+                      <>
+                        {formatBtc(q.data!.balanceSat)} <span className="unit">BTC</span>
+                      </>
+                    )}
+                  </span>
+                  <button
+                    className="remove"
+                    onClick={() => removeEntry(entry.id)}
+                    aria-label="Usuń"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </li>
+            )
+          })}
+          {entries.length === 0 && (
+            <li className="empty">Dodaj XPUB lub adres, aby śledzić saldo.</li>
+          )}
+        </ul>
 
-      <footer className="footer">
-        <button onClick={handleExport} disabled={entries.length === 0}>
-          Eksport kopii
-        </button>
-        <label className="import">
-          Import kopii
-          <input type="file" accept="application/json" onChange={handleImport} hidden />
-        </label>
-      </footer>
-    </main>
+        <footer className="footer">
+          <button onClick={handleExport} disabled={entries.length === 0}>
+            Eksport kopii
+          </button>
+          <label className="import">
+            Import kopii
+            <input type="file" accept="application/json" onChange={handleImport} hidden />
+          </label>
+        </footer>
+      </main>
+    </div>
   )
 }
