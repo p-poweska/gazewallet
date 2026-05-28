@@ -72,9 +72,19 @@ export async function fetchWalletBalance(entry: WatchEntry): Promise<WalletBalan
 }
 
 export function formatBtc(sat: number): string {
-  return (sat / 1e8).toLocaleString('pl-PL', { minimumFractionDigits: 8, maximumFractionDigits: 8 })
+  return (sat / 1e8).toLocaleString('en-US', { minimumFractionDigits: 8, maximumFractionDigits: 8 })
 }
 
 export function formatFiat(value: number, currency: string): string {
-  return value.toLocaleString('pl-PL', { style: 'currency', currency })
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: value < 10 ? 4 : 2,
+  })
+}
+
+export function formatPercent(value: number | null): string {
+  if (value === null || Number.isNaN(value)) return '—'
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${value.toFixed(2)}%`
 }

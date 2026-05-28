@@ -7,9 +7,16 @@ export default defineConfig({
   // a serwer Vite przekazuje żądanie do mempool.space.
   server: {
     proxy: {
+      // Salda adresów: mempool.space
       '/api': {
         target: 'https://mempool.space',
         changeOrigin: true,
+      },
+      // Ceny i statystyki: CoinGecko (PLN + wiele walut, zmiany 24h/7d/30d)
+      '/cg': {
+        target: 'https://api.coingecko.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/cg/, ''),
       },
     },
   },

@@ -5,7 +5,7 @@ import { ripemd160 } from '@noble/hashes/ripemd160'
 
 export type XpubType = 'xpub' | 'ypub' | 'zpub'
 
-// Wersje bajtów (public) dla kluczy rozszerzonych mainnet.
+// Public version bytes for mainnet extended keys.
 const PUBLIC_VERSION: Record<XpubType, number> = {
   xpub: 0x0488b21e,
   ypub: 0x049d7cb2,
@@ -17,7 +17,7 @@ export function detectXpubType(key: string): XpubType {
   if (prefix === 'xpub') return 'xpub'
   if (prefix === 'ypub') return 'ypub'
   if (prefix === 'zpub') return 'zpub'
-  throw new Error('Nieobsługiwany klucz rozszerzony (oczekiwano xpub/ypub/zpub)')
+  throw new Error('Unsupported extended key (expected xpub/ypub/zpub)')
 }
 
 const b58check = base58check(sha256)
@@ -74,7 +74,7 @@ export function deriveAddresses(xpub: string, opts: DeriveOptions = {}): string[
   const out: string[] = []
   for (let i = start; i < start + count; i++) {
     const child = branch.deriveChild(i)
-    if (!child.publicKey) throw new Error('Brak klucza publicznego w derywacji')
+    if (!child.publicKey) throw new Error('Missing public key during derivation')
     out.push(encodeAddress(type, child.publicKey))
   }
   return out

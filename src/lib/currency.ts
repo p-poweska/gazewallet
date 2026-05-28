@@ -1,5 +1,21 @@
-// Waluty wspierane przez mempool.space /api/v1/prices.
-export const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY'] as const
+// Currencies supported by CoinGecko (curated subset).
+export const CURRENCIES = [
+  'USD',
+  'EUR',
+  'PLN',
+  'GBP',
+  'CHF',
+  'CAD',
+  'AUD',
+  'JPY',
+  'CNY',
+  'CZK',
+  'SEK',
+  'NOK',
+  'DKK',
+  'BRL',
+  'INR',
+] as const
 export type Currency = (typeof CURRENCIES)[number]
 
 const KEY = 'gazewallet:currency:v1'

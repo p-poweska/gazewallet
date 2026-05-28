@@ -83,6 +83,11 @@ body {
   font-size: 0.78rem;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .icon-btn {
   width: 40px;
   height: 40px;
@@ -187,6 +192,47 @@ body {
   margin-top: 2px;
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+.stats {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  min-width: 70px;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.stat-value {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat.up .stat-value {
+  color: #16c784;
+}
+
+.stat.down .stat-value {
+  color: #ea3943;
 }
 
 .hero-refresh {
@@ -497,4 +543,51 @@ button:disabled {
 .select:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+/* FAQ */
+.faq {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.faq details {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.faq summary {
+  padding: 12px 14px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  list-style: none;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary::after {
+  content: "+";
+  float: right;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.faq details[open] summary::after {
+  content: "−";
+}
+
+.faq p {
+  margin: 0;
+  padding: 0 14px 14px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--muted);
 }

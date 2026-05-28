@@ -28,7 +28,7 @@ export function saveEntries(entries: WatchEntry[]): void {
 
 export function makeEntry(input: string, label?: string): WatchEntry {
   const value = input.trim()
-  if (!value) throw new Error('Pusta wartość')
+  if (!value) throw new Error('Empty value')
   const id = crypto.randomUUID()
   // xpub/ypub/zpub → traktuj jako klucz rozszerzony; w innym wypadku adres.
   if (/^(xpub|ypub|zpub)/.test(value)) {
@@ -52,6 +52,6 @@ export function exportJson(entries: WatchEntry[]): string {
 export function importJson(text: string): WatchEntry[] {
   const parsed = JSON.parse(text)
   const entries = parsed?.entries
-  if (!Array.isArray(entries)) throw new Error('Nieprawidłowy plik kopii')
+  if (!Array.isArray(entries)) throw new Error('Invalid backup file')
   return entries as WatchEntry[]
 }
