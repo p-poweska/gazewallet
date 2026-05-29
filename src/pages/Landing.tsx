@@ -5,8 +5,7 @@ import { formatFiat } from '../lib/format'
 import { Change } from '../components/Change'
 import { FiatAmount } from '../components/FiatAmount'
 
-// Adres repozytorium — uzupełnij, gdy będzie publiczny.
-const GITHUB_URL = '#'
+const GITHUB_URL = 'https://github.com/p-poweska/gazewallet'
 
 interface Props {
   currency: Currency
