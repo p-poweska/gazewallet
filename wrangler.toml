@@ -1,0 +1,7 @@
+# Cloudflare Pages project config.
+# This is a Pages app (static SPA in dist/ + proxies in functions/),
+# NOT a Worker — deploy with `wrangler pages deploy` so the functions/
+# directory is bundled and the Vite version is irrelevant.
+name = "gazewallet"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-01-01"
