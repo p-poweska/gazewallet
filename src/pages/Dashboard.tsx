@@ -79,11 +79,11 @@ export default function Dashboard({
           {total > 0 ? <FiatAmount value={total} currency={currency} /> : '—'}
         </div>
 
-        {groups.length > 0 && (
+        {total > 0 && (
           <div className="alloc">
             <div className="alloc-bar">
               {groups.map((g, i) => {
-                const pct = total > 0 ? ((g.fiat ?? 0) / total) * 100 : 0
+                const pct = ((g.fiat ?? 0) / total) * 100
                 return (
                   <span
                     key={g.adapter.id}
@@ -94,6 +94,21 @@ export default function Dashboard({
                 )
               })}
             </div>
+            <ul className="alloc-legend">
+              {groups.map((g, i) => {
+                const pct = ((g.fiat ?? 0) / total) * 100
+                return (
+                  <li key={g.adapter.id} className="alloc-item">
+                    <span
+                      className="alloc-dot"
+                      style={{ opacity: Math.max(1 - i * 0.32, 0.4) }}
+                    />
+                    <span className="alloc-sym">{g.adapter.symbol}</span>
+                    <span className="alloc-pct">{pct.toFixed(1)}%</span>
+                  </li>
+                )
+              })}
+            </ul>
           </div>
         )}
 

@@ -484,6 +484,41 @@ button:disabled {
   transition: width 0.4s ease;
 }
 
+.alloc-legend {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+}
+
+.alloc-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+
+.alloc-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.alloc-sym {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.alloc-pct {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
 /* Dashboard — asset cards */
 .assets {
   display: flex;
