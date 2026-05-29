@@ -18,11 +18,22 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/eth/, ''),
       },
-      // Ceny i statystyki: CoinGecko (PLN + wiele walut, zmiany 24h/7d/30d)
+      // Ceny i statystyki: CoinGecko (PLN + wiele walut, zmiany 24h/7d/30d).
+      // Jeśli ustawisz CG_DEMO_KEY w env, dev proxy doda go jako nagłówek —
+      // tak samo jak Pages Function na produkcji.
       '/cg': {
         target: 'https://api.coingecko.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/cg/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('User-Agent', 'gazewallet (dev)')
+            const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+              .process?.env
+            const key = env?.CG_DEMO_KEY
+            if (key) proxyReq.setHeader('x-cg-demo-api-key', key)
+          })
+        },
       },
     },
   },

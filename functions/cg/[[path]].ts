@@ -1,20 +1,33 @@
 // Cloudflare Pages Function: proxy do CoinGecko pod /cg/*.
 // Ukrywa IP użytkownika i omija CORS; cache na brzegu ogranicza zapytania.
+// CoinGecko blokuje anonimowe zapytania z IP centrów danych (np. Cloudflare),
+// dlatego dokładamy darmowy Demo API key z zmiennej środowiskowej CG_DEMO_KEY.
+
+interface Env {
+  CG_DEMO_KEY?: string
+}
 
 interface Context {
   request: Request
   params: { path?: string | string[] }
+  env: Env
 }
 
 const UPSTREAM = 'https://api.coingecko.com'
 
-export const onRequestGet = async ({ request, params }: Context): Promise<Response> => {
+export const onRequestGet = async ({ request, params, env }: Context): Promise<Response> => {
   const segments = Array.isArray(params.path) ? params.path : params.path ? [params.path] : []
   const path = segments.map(encodeURIComponent).join('/')
   const search = new URL(request.url).search
   const target = `${UPSTREAM}/${path}${search}`
 
-  const upstream = await fetch(target, { headers: { Accept: 'application/json' } })
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'User-Agent': 'gazewallet (+https://github.com/p-poweska/gazewallet)',
+  }
+  if (env.CG_DEMO_KEY) headers['x-cg-demo-api-key'] = env.CG_DEMO_KEY
+
+  const upstream = await fetch(target, { headers })
 
   return new Response(upstream.body, {
     status: upstream.status,

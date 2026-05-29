@@ -15,7 +15,12 @@ export const onRequestGet = async ({ request, params }: Context): Promise<Respon
   const search = new URL(request.url).search
   const target = `${UPSTREAM}/${path}${search}`
 
-  const upstream = await fetch(target, { headers: { Accept: 'application/json' } })
+  const upstream = await fetch(target, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'gazewallet (+https://github.com/p-poweska/gazewallet)',
+    },
+  })
 
   return new Response(upstream.body, {
     status: upstream.status,
