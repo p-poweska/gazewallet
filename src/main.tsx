@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
@@ -36,7 +37,9 @@ void requestPersistentStorage()
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: DAY }}>
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </PersistQueryClientProvider>
   </React.StrictMode>,
 )
