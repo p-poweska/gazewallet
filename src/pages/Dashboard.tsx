@@ -82,13 +82,13 @@ export default function Dashboard({
         {groups.length > 0 && (
           <div className="alloc">
             <div className="alloc-bar">
-              {groups.map((g) => {
+              {groups.map((g, i) => {
                 const pct = total > 0 ? ((g.fiat ?? 0) / total) * 100 : 0
                 return (
                   <span
                     key={g.adapter.id}
-                    className={`alloc-seg seg-${g.adapter.id}`}
-                    style={{ width: `${pct}%` }}
+                    className="alloc-seg"
+                    style={{ width: `${pct}%`, opacity: Math.max(1 - i * 0.32, 0.4) }}
                     title={`${g.adapter.name} ${pct.toFixed(1)}%`}
                   />
                 )
@@ -132,7 +132,9 @@ export default function Dashboard({
           return (
             <Link key={g.adapter.id} to={`/app/${g.adapter.id}`} className="card asset-card">
               <div className="asset-head">
-                <span className={`asset-icon icon-${g.adapter.id}`} aria-hidden />
+                <span className="asset-icon" aria-hidden>
+                  {g.adapter.glyph}
+                </span>
                 <div className="asset-id">
                   <span className="asset-name">{g.adapter.name}</span>
                   <span className="asset-count">

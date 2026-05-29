@@ -480,15 +480,8 @@ button:disabled {
 
 .alloc-seg {
   height: 100%;
+  background: var(--accent);
   transition: width 0.4s ease;
-}
-
-.seg-btc {
-  background: #f7931a;
-}
-
-.seg-eth {
-  background: #627eea;
 }
 
 /* Dashboard — asset cards */
@@ -525,14 +518,15 @@ button:disabled {
   height: 34px;
   border-radius: 50%;
   flex-shrink: 0;
-}
-
-.icon-btc {
-  background: #f7931a;
-}
-
-.icon-eth {
-  background: #627eea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #07090c;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .asset-id {

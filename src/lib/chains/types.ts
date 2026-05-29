@@ -23,6 +23,8 @@ export interface ChainAdapter {
   id: ChainId
   name: string
   symbol: string
+  /** Currency glyph shown inside the asset icon (e.g. ₿, Ξ). */
+  glyph: string
   coingeckoId: string
   decimals: number
   /** Decimals to show in the UI. */

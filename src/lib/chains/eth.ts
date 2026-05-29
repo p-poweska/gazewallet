@@ -48,6 +48,7 @@ export const eth: ChainAdapter = {
   id: 'eth',
   name: 'Ethereum',
   symbol: 'ETH',
+  glyph: 'Ξ',
   coingeckoId: 'ethereum',
   decimals: 18,
   displayDecimals: 6,

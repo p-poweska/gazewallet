@@ -84,6 +84,7 @@ export const btc: ChainAdapter = {
   id: 'btc',
   name: 'Bitcoin',
   symbol: 'BTC',
+  glyph: '₿',
   coingeckoId: 'bitcoin',
   decimals: 8,
   displayDecimals: 8,
