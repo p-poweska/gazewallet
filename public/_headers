@@ -1,7 +1,7 @@
 # Nagłówki dla Cloudflare Pages.
 # CSP bez third-party skryptów chroni lokalnie trzymany XPUB przed XSS.
 /*
-  Content-Security-Policy: default-src 'self'; connect-src 'self' https://mempool.space; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   X-Frame-Options: DENY
