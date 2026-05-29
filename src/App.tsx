@@ -1,17 +1,30 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { fetchMarket } from './lib/api'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchMarkets } from './lib/api'
+import { ADAPTERS, getAdapter, makeAccount } from './lib/chains'
+import type { Account, AccountView } from './lib/chains/types'
+import { loadAccounts, saveAccounts } from './lib/store'
 import { ACCENTS, loadAccent, saveAccent } from './lib/theme'
 import { CURRENCIES, loadCurrency, saveCurrency, type Currency } from './lib/currency'
 import Landing from './pages/Landing'
-import Wallet from './pages/Wallet'
+import Dashboard from './pages/Dashboard'
+import ChainDetail from './pages/ChainDetail'
+
+// CoinGecko ids for every supported chain — small list, fetched in one call.
+const COIN_IDS = ADAPTERS.map((a) => a.coingeckoId)
 
 export default function App() {
   const [accent, setAccent] = useState<string>(() => loadAccent())
   const [currency, setCurrency] = useState<Currency>(() => loadCurrency())
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(false)
+  const [accounts, setAccounts] = useState<Account[]>(() => loadAccounts())
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    saveAccounts(accounts)
+  }, [accounts])
 
   function changeAccent(color: string) {
     setAccent(color)
@@ -23,10 +36,64 @@ export default function App() {
     saveCurrency(c)
   }
 
-  const marketQuery = useQuery({
-    queryKey: ['market', currency],
-    queryFn: () => fetchMarket(currency),
+  const marketsQuery = useQuery({
+    queryKey: ['markets', currency],
+    queryFn: () => fetchMarkets(currency, COIN_IDS),
   })
+  const markets = marketsQuery.data ?? {}
+
+  // One balance query per account, keyed by chain+value so caches survive reorders.
+  const balanceQueries = useQueries({
+    queries: accounts.map((account) => ({
+      queryKey: ['balance', account.chain, account.value],
+      queryFn: () => getAdapter(account.chain).fetchBalance(account),
+    })),
+  })
+
+  // Join each account with its async balance state.
+  const views: AccountView[] = useMemo(
+    () =>
+      accounts.map((account, i) => {
+        const q = balanceQueries[i]
+        return {
+          account,
+          balance: q.data,
+          isLoading: q.isLoading,
+          isError: q.isError,
+          dataUpdatedAt: q.dataUpdatedAt,
+        }
+      }),
+    [accounts, balanceQueries],
+  )
+
+  const fetching =
+    balanceQueries.some((q) => q.isFetching) || marketsQuery.isFetching
+
+  function addAccount(input: string): string | null {
+    try {
+      const account = makeAccount(input)
+      if (accounts.some((a) => a.chain === account.chain && a.value === account.value)) {
+        return 'This key/address is already on the list'
+      }
+      setAccounts((prev) => [...prev, account])
+      return null
+    } catch (e) {
+      return e instanceof Error ? e.message : 'Invalid value'
+    }
+  }
+
+  function removeAccount(id: string) {
+    setAccounts((prev) => prev.filter((a) => a.id !== id))
+  }
+
+  function replaceAccounts(next: Account[]) {
+    setAccounts(next)
+  }
+
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: ['balance'] })
+    queryClient.invalidateQueries({ queryKey: ['markets'] })
+  }
 
   return (
     <div className="page">
@@ -60,14 +127,33 @@ export default function App() {
         </header>
 
         <Routes>
-          <Route path="/" element={<Landing currency={currency} market={marketQuery.data} />} />
+          <Route path="/" element={<Landing currency={currency} markets={markets} />} />
           <Route
             path="/app"
             element={
-              <Wallet
+              <Dashboard
+                views={views}
+                markets={markets}
                 currency={currency}
-                market={marketQuery.data}
-                marketFetching={marketQuery.isFetching}
+                fetching={fetching}
+                onAdd={addAccount}
+                onRemove={removeAccount}
+                onReplace={replaceAccounts}
+                onRefresh={refresh}
+              />
+            }
+          />
+          <Route
+            path="/app/:chain"
+            element={
+              <ChainDetail
+                views={views}
+                markets={markets}
+                currency={currency}
+                fetching={fetching}
+                onAdd={addAccount}
+                onRemove={removeAccount}
+                onRefresh={refresh}
               />
             }
           />
@@ -139,9 +225,9 @@ export default function App() {
               <details>
                 <summary>What is gazewallet?</summary>
                 <p>
-                  A watch-only Bitcoin tracker. You add a public key (XPUB) or individual
-                  addresses and it shows your balance. It can only read the blockchain — it can
-                  never spend your coins.
+                  A watch-only crypto tracker. You add a public key (XPUB) or individual addresses
+                  and it shows your balance across Bitcoin and Ethereum. It can only read the
+                  blockchain — it can never spend your coins.
                 </p>
               </details>
               <details>
@@ -164,19 +250,20 @@ export default function App() {
               <details>
                 <summary>How are balances calculated?</summary>
                 <p>
-                  For an XPUB the app derives addresses following the BIP44 “gap limit”: it scans
-                  consecutive addresses until it finds 20 empty ones in a row, then stops. The
-                  “active addr” count is how many addresses actually have transaction history —
-                  the same number your hardware wallet shows.
+                  For a Bitcoin XPUB the app derives addresses following the BIP44 “gap limit”: it
+                  scans consecutive addresses until it finds 20 empty ones in a row, then stops.
+                  The “active addr” count is how many addresses actually have transaction history —
+                  the same number your hardware wallet shows. Ethereum balances come from a single
+                  account address.
                 </p>
               </details>
               <details>
                 <summary>Is it private? Who sees my addresses?</summary>
                 <p>
-                  Address data comes from mempool.space and prices from CoinGecko, both via a
-                  same-origin proxy. The proxy talks to those services so they never see your IP
-                  directly. Your XPUB itself is never sent anywhere — only individual derived
-                  addresses are queried.
+                  On-chain data comes from mempool.space (BTC) and Blockscout (ETH), and prices
+                  from CoinGecko — all via a same-origin proxy. The proxy talks to those services
+                  so they never see your IP directly. Your XPUB itself is never sent anywhere —
+                  only individual derived addresses are queried.
                 </p>
               </details>
               <details>

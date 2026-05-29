@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
 // bez ponownego odpytywania mempool.space (chroni też przed 429).
 const persister = createSyncStoragePersister({
   storage: window.localStorage,
-  key: 'gazewallet:rq:v1',
+  key: 'gazewallet:rq:v2',
 })
 
 void requestPersistentStorage()

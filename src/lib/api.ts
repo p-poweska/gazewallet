@@ -28,7 +28,7 @@ export async function fetchAddress(address: string): Promise<AddressStats> {
   }
 }
 
-export interface BtcMarket {
+export interface Market {
   price: number
   change24h: number | null
   change7d: number | null
@@ -37,7 +37,11 @@ export interface BtcMarket {
   low24h: number | null
 }
 
+/** Keyed by CoinGecko id (e.g. 'bitcoin', 'ethereum'). */
+export type Markets = Record<string, Market>
+
 interface CoinGeckoMarket {
+  id: string
   current_price: number
   high_24h: number | null
   low_24h: number | null
@@ -46,21 +50,24 @@ interface CoinGeckoMarket {
   price_change_percentage_30d_in_currency: number | null
 }
 
-// Cena + statystyki zmian z CoinGecko, w wybranej walucie.
-export async function fetchMarket(currency: string): Promise<BtcMarket> {
+// Prices + change stats from CoinGecko, in the chosen currency, for many coins.
+export async function fetchMarkets(currency: string, ids: string[]): Promise<Markets> {
   const vs = currency.toLowerCase()
-  const url = `/cg/api/v3/coins/markets?vs_currency=${vs}&ids=bitcoin&price_change_percentage=24h%2C7d%2C30d`
+  const idsParam = encodeURIComponent(ids.join(','))
+  const url = `/cg/api/v3/coins/markets?vs_currency=${vs}&ids=${idsParam}&price_change_percentage=24h%2C7d%2C30d`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Price API error (${res.status})`)
   const arr = (await res.json()) as CoinGeckoMarket[]
-  const d = arr[0]
-  if (!d) throw new Error('No market data')
-  return {
-    price: d.current_price,
-    change24h: d.price_change_percentage_24h_in_currency,
-    change7d: d.price_change_percentage_7d_in_currency,
-    change30d: d.price_change_percentage_30d_in_currency,
-    high24h: d.high_24h,
-    low24h: d.low_24h,
+  const out: Markets = {}
+  for (const d of arr) {
+    out[d.id] = {
+      price: d.current_price,
+      change24h: d.price_change_percentage_24h_in_currency,
+      change7d: d.price_change_percentage_7d_in_currency,
+      change30d: d.price_change_percentage_30d_in_currency,
+      high24h: d.high_24h,
+      low24h: d.low_24h,
+    }
   }
+  return out
 }

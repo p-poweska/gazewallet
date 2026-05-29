@@ -1,4 +1,4 @@
-import { formatPercent } from '../lib/wallet'
+import { formatPercent } from '../lib/format'
 
 export function Change({ label, value }: { label: string; value: number | null }) {
   const cls = value === null ? '' : value >= 0 ? 'up' : 'down'

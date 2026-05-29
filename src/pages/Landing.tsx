@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import type { BtcMarket } from '../lib/api'
+import type { Markets } from '../lib/api'
 import type { Currency } from '../lib/currency'
-import { formatFiat } from '../lib/wallet'
+import { formatFiat } from '../lib/format'
 import { Change } from '../components/Change'
 import { FiatAmount } from '../components/FiatAmount'
 
@@ -10,7 +10,7 @@ const GITHUB_URL = '#'
 
 interface Props {
   currency: Currency
-  market?: BtcMarket
+  markets: Markets
 }
 
 const FEATURES: { title: string; body: string }[] = [
@@ -57,7 +57,8 @@ const SAFETY: string[] = [
   'Open source, so anyone can audit exactly what it does.',
 ]
 
-export default function Landing({ currency, market }: Props) {
+export default function Landing({ currency, markets }: Props) {
+  const market = markets['bitcoin']
   return (
     <div className="landing">
       <section className="lp-hero">
