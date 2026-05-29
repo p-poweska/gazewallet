@@ -86,13 +86,19 @@ export default function App() {
     setAccounts((prev) => prev.filter((a) => a.id !== id))
   }
 
+  function renameAccount(id: string, label: string) {
+    const trimmed = label.trim()
+    setAccounts((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, label: trimmed || undefined } : a)),
+    )
+  }
+
   function replaceAccounts(next: Account[]) {
     setAccounts(next)
   }
 
-  function refresh() {
-    queryClient.invalidateQueries({ queryKey: ['balance'] })
-    queryClient.invalidateQueries({ queryKey: ['markets'] })
+  function retryAccount(account: Account) {
+    queryClient.invalidateQueries({ queryKey: ['balance', account.chain, account.value] })
   }
 
   return (
@@ -137,9 +143,7 @@ export default function App() {
                 currency={currency}
                 fetching={fetching}
                 onAdd={addAccount}
-                onRemove={removeAccount}
                 onReplace={replaceAccounts}
-                onRefresh={refresh}
               />
             }
           />
@@ -153,7 +157,8 @@ export default function App() {
                 fetching={fetching}
                 onAdd={addAccount}
                 onRemove={removeAccount}
-                onRefresh={refresh}
+                onRename={renameAccount}
+                onRetry={retryAccount}
               />
             }
           />

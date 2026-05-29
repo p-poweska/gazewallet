@@ -16,9 +16,12 @@ const DAY = 1000 * 60 * 60 * 24
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 min świeżości — odświeżenie nie odpytuje API
+      staleTime: 1000 * 60 * 5, // 5 min świeżości — w tym oknie używa cache
       gcTime: DAY,
-      refetchOnWindowFocus: false,
+      // Auto-odświeżanie: co 5 min w tle oraz po powrocie do karty (jeśli nieświeże).
+      refetchInterval: 1000 * 60 * 5,
+      refetchIntervalInBackground: false,
+      refetchOnWindowFocus: true,
       retry: 2,
       retryDelay: (attempt) => Math.min(2000 * 2 ** attempt, 15000),
     },

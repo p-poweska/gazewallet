@@ -142,7 +142,7 @@ export default function Landing({ currency, markets }: Props) {
         <div>
           <h2>Open source</h2>
           <p>
-            gazewallet is free and open source. Bitcoin today; Ethereum and other chains are
+            gazewallet is free and open source. Bitcoin and Ethereum today, other chains are
             planned. Contributions and audits welcome.
           </p>
         </div>

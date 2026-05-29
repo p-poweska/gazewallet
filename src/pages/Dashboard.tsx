@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Markets } from '../lib/api'
 import type { Account, AccountView } from '../lib/chains/types'
-import { groupByChain, totalFiat } from '../lib/portfolio'
+import { allocShade, groupByChain, portfolioChange24h, totalFiat } from '../lib/portfolio'
 import { exportJson, importJson } from '../lib/store'
 import type { Currency } from '../lib/currency'
 import { formatAmount } from '../lib/format'
@@ -15,25 +15,16 @@ interface Props {
   currency: Currency
   fetching: boolean
   onAdd: (input: string) => string | null
-  onRemove: (id: string) => void
   onReplace: (accounts: Account[]) => void
-  onRefresh: () => void
 }
 
-export default function Dashboard({
-  views,
-  markets,
-  currency,
-  fetching,
-  onAdd,
-  onReplace,
-  onRefresh,
-}: Props) {
+export default function Dashboard({ views, markets, currency, fetching, onAdd, onReplace }: Props) {
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const groups = useMemo(() => groupByChain(views, markets), [views, markets])
   const total = useMemo(() => totalFiat(groups), [groups])
+  const change24h = useMemo(() => portfolioChange24h(groups, markets), [groups, markets])
   const loading = views.some((v) => v.isLoading)
   const lastUpdated = useMemo(() => {
     const times = views.map((v) => v.dataUpdatedAt).filter(Boolean)
@@ -78,6 +69,11 @@ export default function Dashboard({
         <div className="hero-fiat">
           {total > 0 ? <FiatAmount value={total} currency={currency} /> : '—'}
         </div>
+        {change24h !== null && (
+          <div className="stats">
+            <Change label="24h" value={change24h} />
+          </div>
+        )}
 
         {total > 0 && (
           <div className="alloc">
@@ -88,7 +84,7 @@ export default function Dashboard({
                   <span
                     key={g.adapter.id}
                     className="alloc-seg"
-                    style={{ width: `${pct}%`, opacity: Math.max(1 - i * 0.32, 0.4) }}
+                    style={{ width: `${pct}%`, background: allocShade(i) }}
                     title={`${g.adapter.name} ${pct.toFixed(1)}%`}
                   />
                 )
@@ -99,10 +95,7 @@ export default function Dashboard({
                 const pct = ((g.fiat ?? 0) / total) * 100
                 return (
                   <li key={g.adapter.id} className="alloc-item">
-                    <span
-                      className="alloc-dot"
-                      style={{ opacity: Math.max(1 - i * 0.32, 0.4) }}
-                    />
+                    <span className="alloc-dot" style={{ background: allocShade(i) }} />
                     <span className="alloc-sym">{g.adapter.symbol}</span>
                     <span className="alloc-pct">{pct.toFixed(1)}%</span>
                   </li>
@@ -113,15 +106,14 @@ export default function Dashboard({
         )}
 
         {views.length > 0 && (
-          <div className="hero-refresh">
-            {lastUpdated > 0 && (
+          <div className="hero-status">
+            {fetching ? (
+              <span className="updated">Updating…</span>
+            ) : lastUpdated > 0 ? (
               <span className="updated">
-                Updated {new Date(lastUpdated).toLocaleTimeString('en-US')}
+                Updated {new Date(lastUpdated).toLocaleTimeString('en-US')} · auto-refreshes
               </span>
-            )}
-            <button className="refresh" onClick={onRefresh} disabled={fetching}>
-              {fetching ? 'Refreshing…' : 'Refresh'}
-            </button>
+            ) : null}
           </div>
         )}
       </section>
