@@ -1,0 +1,3 @@
+# SPA fallback dla Cloudflare Pages — klienckie trasy (/app itd.) serwują index.html.
+# Funkcje /api/* i /cg/* mają pierwszeństwo i nie są łapane przez tę regułę.
+/*    /index.html    200
