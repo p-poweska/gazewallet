@@ -53,24 +53,3 @@ export async function requestPersistentStorage(): Promise<boolean> {
   if (await navigator.storage.persisted()) return true
   return navigator.storage.persist()
 }
-
-export function exportJson(accounts: Account[]): string {
-  return JSON.stringify({ version: 2, accounts }, null, 2)
-}
-
-export function importJson(text: string): Account[] {
-  const parsed = JSON.parse(text)
-  // v2 backup: { version: 2, accounts: [...] }
-  if (Array.isArray(parsed?.accounts)) return parsed.accounts as Account[]
-  // v1 backup: { version: 1, entries: [...] } — migrate to BTC accounts.
-  if (Array.isArray(parsed?.entries)) {
-    return (parsed.entries as LegacyEntry[]).map((e) => ({
-      id: e.id ?? crypto.randomUUID(),
-      chain: 'btc' as const,
-      kind: e.kind,
-      value: e.value,
-      label: e.label,
-    }))
-  }
-  throw new Error('Invalid backup file')
-}

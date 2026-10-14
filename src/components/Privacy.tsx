@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { Eye, EyeOff } from 'lucide-react'
 
 const KEY = 'gazewallet:privacy:v1'
-const PrivacyContext = createContext({ hidden: false, toggle: () => {} })
+const PrivacyContext = createContext({ hidden: false, toggle: () => {}, setHidden: (_value: boolean) => {} })
 
 function loadHidden(): boolean {
   try {
@@ -23,8 +23,7 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', sync)
   }, [])
 
-  function toggle() {
-    const next = !hidden
+  function changeHidden(next: boolean) {
     setHidden(next)
     try {
       localStorage.setItem(KEY, next ? 'hidden' : 'visible')
@@ -33,7 +32,7 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  return <PrivacyContext.Provider value={{ hidden, toggle }}>{children}</PrivacyContext.Provider>
+  return <PrivacyContext.Provider value={{ hidden, toggle: () => changeHidden(!hidden), setHidden: changeHidden }}>{children}</PrivacyContext.Provider>
 }
 
 export const usePrivacy = () => useContext(PrivacyContext)

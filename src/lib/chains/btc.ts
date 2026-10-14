@@ -1,4 +1,4 @@
-import { deriveAddresses, detectXpubType } from '../derive'
+import { deriveAddresses, validateBtcInput } from '../derive'
 import { fetchAddress, type AddressStats } from '../api'
 import type { Account, AccountBalance, AccountKind, ChainAdapter } from './types'
 
@@ -46,18 +46,7 @@ async function scanChain(xpub: string, chain: 0 | 1): Promise<AddressStats[]> {
 }
 
 function detect(input: string): AccountKind | null {
-  const v = input.trim()
-  if (/^(xpub|ypub|zpub)/.test(v)) {
-    try {
-      detectXpubType(v)
-      return 'xpub'
-    } catch {
-      return null
-    }
-  }
-  // Mainnet address shapes: legacy (1/3) and bech32 (bc1).
-  if (/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{20,}$/.test(v)) return 'address'
-  return null
+  return validateBtcInput(input.trim())
 }
 
 async function fetchBalance(account: Account): Promise<AccountBalance> {
@@ -77,6 +66,8 @@ async function fetchBalance(account: Account): Promise<AccountBalance> {
     txCount: stats.reduce((s, a) => s + a.txCount, 0),
     usedCount: stats.filter((a) => a.txCount > 0).length,
     scannedCount: stats.length,
+    trackedAddresses: stats.map((a) => a.address),
+    activeAddresses: stats.filter((a) => a.txCount > 0).map((a) => a.address),
   }
 }
 

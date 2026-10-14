@@ -40,6 +40,10 @@ export function totalFiat(groups: ChainGroup[]): number {
 // Reconstructs each asset's value 24h ago from its 24h % change, then compares
 // the totals. Returns null if any contributing asset has incomplete data.
 export function portfolioChange24h(groups: ChainGroup[], markets: Markets): number | null {
+  return portfolioPriceEffect24h(groups, markets)?.percent ?? null
+}
+
+export function portfolioPriceEffect24h(groups: ChainGroup[], markets: Markets): { percent: number; delta: number } | null {
   let now = 0
   let prev = 0
   let any = false
@@ -53,7 +57,7 @@ export function portfolioChange24h(groups: ChainGroup[], markets: Markets): numb
     any = true
   }
   if (!any || prev === 0) return null
-  return ((now - prev) / prev) * 100
+  return { percent: ((now - prev) / prev) * 100, delta: now - prev }
 }
 
 export function isChainId(value: string | undefined): value is ChainId {

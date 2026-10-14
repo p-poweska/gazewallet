@@ -17,6 +17,9 @@ export interface AccountBalance {
   usedCount: number
   /** How many addresses were scanned/queried. */
   scannedCount: number
+  /** Locally derived BTC addresses; never contains the XPUB itself. */
+  trackedAddresses?: string[]
+  activeAddresses?: string[]
 }
 
 export interface ChainAdapter {

@@ -40,7 +40,15 @@ void requestPersistentStorage()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: DAY }}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{
+      persister,
+      maxAge: DAY,
+      dehydrateOptions: {
+        // Raw address pages are large and duplicated across BTC addresses.
+        // Persist only the compact, deduplicated transaction list.
+        shouldDehydrateQuery: (query) => query.state.status === 'success' && query.queryKey[0] !== 'transaction-page',
+      },
+    }}>
       <BrowserRouter>
         <App />
       </BrowserRouter>

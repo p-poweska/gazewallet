@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@noble/hashes": "^1.4.0",
@@ -17,6 +17,7 @@
     "@tanstack/query-sync-storage-persister": "^5.40.0",
     "@tanstack/react-query": "^5.40.0",
     "@tanstack/react-query-persist-client": "^5.40.0",
+    "@zxing/browser": "^0.2.1",
     "lucide-react": "^1.57.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -28,6 +29,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "fake-indexeddb": "^6.2.5",
+    "tsx": "^4.23.15",
     "typescript": "^5.4.5",
     "vite": "^5.2.0",
     "vite-plugin-pwa": "^0.20.0"

@@ -2,14 +2,18 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { Markets } from '../lib/api'
 import type { Account, AccountView } from '../lib/chains/types'
-import { getAdapter, groupByChain, isChainId } from '../lib/portfolio'
+import { getAdapter, groupByChain, isChainId, portfolioPriceEffect24h } from '../lib/portfolio'
 import type { Currency } from '../lib/currency'
 import { formatAmount, formatFiat } from '../lib/format'
 import { Change } from '../components/Change'
 import { FiatAmount } from '../components/FiatAmount'
 import { DataStatus } from '../components/DataStatus'
 import { getDataStatus, type MarketQueryState } from '../lib/data-status'
-import { PrivateValue, usePrivacy } from '../components/Privacy'
+import { PrivateValue } from '../components/Privacy'
+import { RecentTransactions } from '../components/RecentTransactions'
+import { AddAccount } from '../components/AddAccount'
+import { portfolioOverlapWarning } from '../lib/account-overlap'
+import { PriceEffect } from '../components/PriceEffect'
 
 interface Props {
   views: AccountView[]
@@ -17,7 +21,7 @@ interface Props {
   currency: Currency
   marketState: MarketQueryState
   dataEnvironment: { online: boolean; now: number }
-  onAdd: (input: string) => string | null
+  onAdd: (input: string, label?: string) => string | null
   onRemove: (id: string) => void
   onRename: (id: string, label: string) => void
   onRetry: (account: Account) => void
@@ -35,11 +39,8 @@ export default function ChainDetail({
   onRetry,
 }: Props) {
   const { chain } = useParams()
-  const [input, setInput] = useState('')
-  const [error, setError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
-  const { hidden } = usePrivacy()
 
   const valid = isChainId(chain)
   const chainViews = useMemo(
@@ -69,17 +70,8 @@ export default function ChainDetail({
   const status = getDataStatus(groupByChain(chainViews, markets), marketState, dataEnvironment.online, dataEnvironment.now)
   const hasBalance = chainViews.some((v) => v.balance)
 
-  function add() {
-    setError(null)
-    const value = input.trim()
-    if (value && adapter.detect(value) === null) {
-      setError(`That doesn't look like a valid ${adapter.name} key or address`)
-      return
-    }
-    const err = onAdd(input)
-    if (err) setError(err)
-    else setInput('')
-  }
+  const overlap = portfolioOverlapWarning(chainViews)
+  const priceEffect = status.complete ? portfolioPriceEffect24h(groupByChain(chainViews, markets), markets) : null
 
   function startEdit(account: Account) {
     setEditingId(account.id)
@@ -128,25 +120,11 @@ export default function ChainDetail({
           </div>
         )}
         <DataStatus status={status} />
+        <PriceEffect effect={priceEffect} currency={currency} />
       </section>
 
-      <section className="add">
-        <input
-          type={hidden ? 'password' : 'text'}
-          autoComplete="off"
-          aria-label="Public key or address"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && add()}
-          placeholder={chain === 'btc' ? 'xpub / ypub / zpub or bc1… address' : '0x… address'}
-          spellCheck={false}
-          autoCapitalize="off"
-        />
-        <button className="primary" onClick={add}>
-          Add
-        </button>
-      </section>
-      {error && <p className="error">{error}</p>}
+      {overlap && <p className="overlap-warning" role="status">{overlap}</p>}
+      <AddAccount views={views} chain={chain} onAdd={onAdd} />
 
       <ul className="list">
         {chainViews.map((v) => {
@@ -159,6 +137,7 @@ export default function ChainDetail({
                     className="label-input"
                     autoFocus
                     value={editValue}
+                    maxLength={120}
                     placeholder="Label (e.g. Cold wallet)"
                     onChange={(e) => setEditValue(e.target.value)}
                     onBlur={() => commitEdit(v.account.id)}
@@ -233,6 +212,7 @@ export default function ChainDetail({
           <li className="empty">No {adapter.name} accounts yet. Add one above.</li>
         )}
       </ul>
+      <RecentTransactions chain={chain} views={views} online={dataEnvironment.online} />
     </>
   )
 }
