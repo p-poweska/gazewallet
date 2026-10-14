@@ -8,28 +8,28 @@ import type { Currency } from '../lib/currency'
 import { formatAmount } from '../lib/format'
 import { Change } from '../components/Change'
 import { FiatAmount } from '../components/FiatAmount'
+import { DataStatus } from '../components/DataStatus'
+import { getDataStatus, type MarketQueryState } from '../lib/data-status'
 
 interface Props {
   views: AccountView[]
   markets: Markets
   currency: Currency
-  fetching: boolean
+  marketState: MarketQueryState
+  dataEnvironment: { online: boolean; now: number }
   onAdd: (input: string) => string | null
   onReplace: (accounts: Account[]) => void
 }
 
-export default function Dashboard({ views, markets, currency, fetching, onAdd, onReplace }: Props) {
+export default function Dashboard({ views, markets, currency, marketState, dataEnvironment, onAdd, onReplace }: Props) {
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const groups = useMemo(() => groupByChain(views, markets), [views, markets])
   const total = useMemo(() => totalFiat(groups), [groups])
-  const change24h = useMemo(() => portfolioChange24h(groups, markets), [groups, markets])
+  const status = getDataStatus(groups, marketState, dataEnvironment.online, dataEnvironment.now)
+  const change24h = status.complete ? portfolioChange24h(groups, markets) : null
   const loading = views.some((v) => v.isLoading)
-  const lastUpdated = useMemo(() => {
-    const times = views.map((v) => v.dataUpdatedAt).filter(Boolean)
-    return times.length ? Math.max(...times) : 0
-  }, [views])
 
   function add() {
     setError(null)
@@ -65,9 +65,9 @@ export default function Dashboard({ views, markets, currency, fetching, onAdd, o
   return (
     <>
       <section className="hero">
-        <span className="hero-label">Total portfolio</span>
+        <span className="hero-label">{status.complete ? 'Total portfolio' : 'Known portfolio value'}</span>
         <div className="hero-fiat">
-          {total > 0 ? <FiatAmount value={total} currency={currency} /> : '—'}
+          {status.hasValue ? <FiatAmount value={total} currency={currency} /> : '—'}
         </div>
         {change24h !== null && (
           <div className="stats">
@@ -75,7 +75,7 @@ export default function Dashboard({ views, markets, currency, fetching, onAdd, o
           </div>
         )}
 
-        {total > 0 && (
+        {status.complete && total > 0 && (
           <div className="alloc">
             <div className="alloc-bar">
               {groups.map((g, i) => {
@@ -105,17 +105,7 @@ export default function Dashboard({ views, markets, currency, fetching, onAdd, o
           </div>
         )}
 
-        {views.length > 0 && (
-          <div className="hero-status">
-            {fetching ? (
-              <span className="updated">Updating…</span>
-            ) : lastUpdated > 0 ? (
-              <span className="updated">
-                Updated {new Date(lastUpdated).toLocaleTimeString('en-US')} · auto-refreshes
-              </span>
-            ) : null}
-          </div>
-        )}
+        <DataStatus status={status} />
       </section>
 
       <section className="add">
@@ -136,6 +126,7 @@ export default function Dashboard({ views, markets, currency, fetching, onAdd, o
       <div className="assets">
         {groups.map((g) => {
           const m = markets[g.adapter.coingeckoId]
+          const groupStatus = getDataStatus([g], marketState, dataEnvironment.online, dataEnvironment.now)
           return (
             <Link key={g.adapter.id} to={`/app/${g.adapter.id}`} className="card asset-card">
               <div className="asset-head">
@@ -152,12 +143,14 @@ export default function Dashboard({ views, markets, currency, fetching, onAdd, o
               </div>
               <div className="asset-amounts">
                 <span className="asset-fiat">
-                  {g.fiat != null ? <FiatAmount value={g.fiat} currency={currency} /> : '—'}
+                  {groupStatus.hasValue && g.fiat != null ? <FiatAmount value={g.fiat} currency={currency} /> : '—'}
                 </span>
                 <span className={`asset-crypto ${g.isLoading ? 'pulse' : ''}`}>
-                  {formatAmount(g.amount, g.adapter.displayDecimals)} {g.adapter.symbol}
+                  {g.views.some((v) => v.balance) ? formatAmount(g.amount, g.adapter.displayDecimals) : '—'} {g.adapter.symbol}
                 </span>
               </div>
+              {!groupStatus.complete && <span className="data-status-warning">Partial valuation</span>}
+              <DataStatus status={groupStatus} compact />
             </Link>
           )
         })}

@@ -2,17 +2,20 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { Markets } from '../lib/api'
 import type { Account, AccountView } from '../lib/chains/types'
-import { getAdapter, isChainId } from '../lib/portfolio'
+import { getAdapter, groupByChain, isChainId } from '../lib/portfolio'
 import type { Currency } from '../lib/currency'
 import { formatAmount, formatFiat } from '../lib/format'
 import { Change } from '../components/Change'
 import { FiatAmount } from '../components/FiatAmount'
+import { DataStatus } from '../components/DataStatus'
+import { getDataStatus, type MarketQueryState } from '../lib/data-status'
 
 interface Props {
   views: AccountView[]
   markets: Markets
   currency: Currency
-  fetching: boolean
+  marketState: MarketQueryState
+  dataEnvironment: { online: boolean; now: number }
   onAdd: (input: string) => string | null
   onRemove: (id: string) => void
   onRename: (id: string, label: string) => void
@@ -23,7 +26,8 @@ export default function ChainDetail({
   views,
   markets,
   currency,
-  fetching,
+  marketState,
+  dataEnvironment,
   onAdd,
   onRemove,
   onRename,
@@ -60,10 +64,8 @@ export default function ChainDetail({
   const market = markets[adapter.coingeckoId]
   const price = market?.price ?? 0
   const loading = chainViews.some((v) => v.isLoading)
-  const lastUpdated = chainViews
-    .map((v) => v.dataUpdatedAt)
-    .filter(Boolean)
-    .reduce((a, b) => Math.max(a, b), 0)
+  const status = getDataStatus(groupByChain(chainViews, markets), marketState, dataEnvironment.online, dataEnvironment.now)
+  const hasBalance = chainViews.some((v) => v.balance)
 
   function add() {
     setError(null)
@@ -96,13 +98,14 @@ export default function ChainDetail({
 
       <section className="hero">
         <span className="hero-label">{adapter.name}</span>
-        {price > 0 && (
-          <div className="hero-fiat">
+        {!status.complete && chainViews.length > 0 && <div className="data-status-warning">Known balance only</div>}
+        <div className="hero-fiat">
+          {status.hasValue ? (
             <FiatAmount value={amount * price} currency={currency} />
-          </div>
-        )}
+          ) : '—'}
+        </div>
         <div className={`hero-btc ${loading ? 'pulse' : ''}`}>
-          {formatAmount(amount, adapter.displayDecimals)}
+          {hasBalance ? formatAmount(amount, adapter.displayDecimals) : '—'}
           <span className="unit">{adapter.symbol}</span>
         </div>
 
@@ -118,17 +121,7 @@ export default function ChainDetail({
             <Change label="30d" value={market.change30d} />
           </div>
         )}
-        {chainViews.length > 0 && (
-          <div className="hero-status">
-            {fetching ? (
-              <span className="updated">Updating…</span>
-            ) : lastUpdated > 0 ? (
-              <span className="updated">
-                Updated {new Date(lastUpdated).toLocaleTimeString('en-US')} · auto-refreshes
-              </span>
-            ) : null}
-          </div>
-        )}
+        <DataStatus status={status} />
       </section>
 
       <section className="add">
@@ -185,6 +178,10 @@ export default function ChainDetail({
                       {v.balance.usedCount} active addr · {v.balance.txCount} tx
                     </span>
                   )}
+                  <DataStatus
+                    status={getDataStatus(groupByChain([v], markets), marketState, dataEnvironment.online, dataEnvironment.now)}
+                    compact
+                  />
                 </div>
               </div>
               <div className="item-right">
@@ -199,12 +196,15 @@ export default function ChainDetail({
                         <span className="bal-fiat">≈ {formatFiat(fiat, currency)}</span>
                       )}
                     </>
-                  ) : v.isError ? (
-                    <button className="bal-error" onClick={() => onRetry(v.account)}>
-                      error · retry
-                    </button>
+                  ) : v.isError || !dataEnvironment.online ? (
+                    <span className="bal-error-text">Balance unavailable</span>
                   ) : (
-                    <span className="skeleton" />
+                    <span className="skeleton" aria-label="Loading balance" />
+                  )}
+                  {v.isError && (
+                    <button className="bal-error" disabled={!dataEnvironment.online || v.isFetching} onClick={() => onRetry(v.account)}>
+                      {v.isFetching ? 'Retrying...' : 'Retry balance'}
+                    </button>
                   )}
                 </span>
                 <button

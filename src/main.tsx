@@ -8,6 +8,7 @@ import App from './App'
 import { requestPersistentStorage } from './lib/store'
 import { applyAccent, loadAccent } from './lib/theme'
 import './index.css'
+import { DATA_FRESHNESS_MS } from './lib/data-status'
 
 applyAccent(loadAccent())
 
@@ -16,10 +17,10 @@ const DAY = 1000 * 60 * 60 * 24
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 min świeżości — w tym oknie używa cache
+      staleTime: DATA_FRESHNESS_MS,
       gcTime: DAY,
       // Auto-odświeżanie: co 5 min w tle oraz po powrocie do karty (jeśli nieświeże).
-      refetchInterval: 1000 * 60 * 5,
+      refetchInterval: DATA_FRESHNESS_MS,
       refetchIntervalInBackground: false,
       refetchOnWindowFocus: true,
       retry: 2,

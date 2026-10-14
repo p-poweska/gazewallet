@@ -10,6 +10,7 @@ import { CURRENCIES, loadCurrency, saveCurrency, type Currency } from './lib/cur
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import ChainDetail from './pages/ChainDetail'
+import { useDataEnvironment } from './hooks/use-data-environment'
 
 // CoinGecko ids for every supported chain — small list, fetched in one call.
 const COIN_IDS = ADAPTERS.map((a) => a.coingeckoId)
@@ -21,6 +22,7 @@ export default function App() {
   const [faqOpen, setFaqOpen] = useState(false)
   const [accounts, setAccounts] = useState<Account[]>(() => loadAccounts())
   const queryClient = useQueryClient()
+  const dataEnvironment = useDataEnvironment()
 
   useEffect(() => {
     saveAccounts(accounts)
@@ -59,15 +61,13 @@ export default function App() {
           account,
           balance: q.data,
           isLoading: q.isLoading,
+          isFetching: q.isFetching,
           isError: q.isError,
           dataUpdatedAt: q.dataUpdatedAt,
         }
       }),
     [accounts, balanceQueries],
   )
-
-  const fetching =
-    balanceQueries.some((q) => q.isFetching) || marketsQuery.isFetching
 
   function addAccount(input: string): string | null {
     try {
@@ -141,7 +141,8 @@ export default function App() {
                 views={views}
                 markets={markets}
                 currency={currency}
-                fetching={fetching}
+                marketState={marketsQuery}
+                dataEnvironment={dataEnvironment}
                 onAdd={addAccount}
                 onReplace={replaceAccounts}
               />
@@ -154,7 +155,8 @@ export default function App() {
                 views={views}
                 markets={markets}
                 currency={currency}
-                fetching={fetching}
+                marketState={marketsQuery}
+                dataEnvironment={dataEnvironment}
                 onAdd={addAccount}
                 onRemove={removeAccount}
                 onRename={renameAccount}

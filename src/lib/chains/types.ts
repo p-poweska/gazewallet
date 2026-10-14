@@ -39,6 +39,7 @@ export interface AccountView {
   account: Account
   balance?: AccountBalance
   isLoading: boolean
+  isFetching: boolean
   isError: boolean
   dataUpdatedAt: number
 }

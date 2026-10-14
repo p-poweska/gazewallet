@@ -60,6 +60,7 @@ export async function fetchMarkets(currency: string, ids: string[]): Promise<Mar
   const arr = (await res.json()) as CoinGeckoMarket[]
   const out: Markets = {}
   for (const d of arr) {
+    if (typeof d.current_price !== 'number' || !Number.isFinite(d.current_price) || d.current_price < 0) continue
     out[d.id] = {
       price: d.current_price,
       change24h: d.price_change_percentage_24h_in_currency,
