@@ -9,6 +9,7 @@ import { Change } from '../components/Change'
 import { FiatAmount } from '../components/FiatAmount'
 import { DataStatus } from '../components/DataStatus'
 import { getDataStatus, type MarketQueryState } from '../lib/data-status'
+import { PrivateValue, usePrivacy } from '../components/Privacy'
 
 interface Props {
   views: AccountView[]
@@ -38,6 +39,7 @@ export default function ChainDetail({
   const [error, setError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  const { hidden } = usePrivacy()
 
   const valid = isChainId(chain)
   const chainViews = useMemo(
@@ -100,13 +102,17 @@ export default function ChainDetail({
         <span className="hero-label">{adapter.name}</span>
         {!status.complete && chainViews.length > 0 && <div className="data-status-warning">Known balance only</div>}
         <div className="hero-fiat">
+          <PrivateValue>
           {status.hasValue ? (
             <FiatAmount value={amount * price} currency={currency} />
           ) : '—'}
+          </PrivateValue>
         </div>
         <div className={`hero-btc ${loading ? 'pulse' : ''}`}>
+          <PrivateValue>
           {hasBalance ? formatAmount(amount, adapter.displayDecimals) : '—'}
           <span className="unit">{adapter.symbol}</span>
+          </PrivateValue>
         </div>
 
         {price > 0 && (
@@ -126,6 +132,9 @@ export default function ChainDetail({
 
       <section className="add">
         <input
+          type={hidden ? 'password' : 'text'}
+          autoComplete="off"
+          aria-label="Public key or address"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
@@ -172,7 +181,7 @@ export default function ChainDetail({
                 )}
                 <div className="item-sub">
                   <span className="badge">{v.account.kind === 'xpub' ? 'XPUB' : 'ADDRESS'}</span>
-                  <code className="value">{v.account.value}</code>
+                  <code className="value"><PrivateValue>{v.account.value}</PrivateValue></code>
                   {v.balance && v.account.kind === 'xpub' && (
                     <span className="meta">
                       {v.balance.usedCount} active addr · {v.balance.txCount} tx
@@ -189,11 +198,13 @@ export default function ChainDetail({
                   {v.balance ? (
                     <>
                       <span className="bal-crypto">
+                        <PrivateValue>
                         {formatAmount(v.balance.amount, adapter.displayDecimals)}{' '}
                         <span className="unit">{adapter.symbol}</span>
+                        </PrivateValue>
                       </span>
                       {fiat !== null && (
-                        <span className="bal-fiat">≈ {formatFiat(fiat, currency)}</span>
+                        <span className="bal-fiat"><PrivateValue>≈ {formatFiat(fiat, currency)}</PrivateValue></span>
                       )}
                     </>
                   ) : v.isError || !dataEnvironment.online ? (

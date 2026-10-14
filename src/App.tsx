@@ -11,11 +11,17 @@ import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import ChainDetail from './pages/ChainDetail'
 import { useDataEnvironment } from './hooks/use-data-environment'
+import { PrivacyProvider, PrivacyToggle } from './components/Privacy'
+import { usePortfolioHistory } from './hooks/use-portfolio-history'
 
 // CoinGecko ids for every supported chain — small list, fetched in one call.
 const COIN_IDS = ADAPTERS.map((a) => a.coingeckoId)
 
 export default function App() {
+  return <PrivacyProvider><AppContent /></PrivacyProvider>
+}
+
+function AppContent() {
   const [accent, setAccent] = useState<string>(() => loadAccent())
   const [currency, setCurrency] = useState<Currency>(() => loadCurrency())
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -68,6 +74,7 @@ export default function App() {
       }),
     [accounts, balanceQueries],
   )
+  const history = usePortfolioHistory(views, markets, marketsQuery, currency, dataEnvironment.online)
 
   function addAccount(input: string): string | null {
     try {
@@ -113,6 +120,7 @@ export default function App() {
             </div>
           </Link>
           <div className="header-actions">
+            <PrivacyToggle />
             <button
               className="icon-btn"
               onClick={() => setFaqOpen(true)}
@@ -138,6 +146,8 @@ export default function App() {
             path="/app"
             element={
               <Dashboard
+                accent={accent}
+                history={history}
                 views={views}
                 markets={markets}
                 currency={currency}
@@ -229,6 +239,33 @@ export default function App() {
               </button>
             </div>
             <div className="faq">
+              <details>
+                <summary>How does portfolio history work?</summary>
+                <p>
+                  History begins with your first complete, up-to-date valuation. At most one
+                  observation is kept per five-minute interval while the app is open. Missing,
+                  offline and failed updates are not recorded. Gaps are not backfilled.
+                </p>
+                <p>
+                  Each currency and list of watched accounts has its own series, so changing
+                  currency or adding/removing accounts does not rewrite past values. Renaming
+                  an account does not start a new series. Changes include deposits and withdrawals;
+                  they are not investment returns.
+                </p>
+                <p>
+                  Observations are stored in IndexedDB on this device for up to 400 days and are
+                  not included in account backups. Clearing browser data removes them. The trash
+                  button deletes history without removing your watched accounts.
+                </p>
+              </details>
+              <details>
+                <summary>What does privacy mode hide?</summary>
+                <p>
+                  The eye button hides your balances, addresses, allocation and portfolio history
+                  on every screen. Your choice is remembered on this device. It is a visual privacy
+                  setting, not encryption or a password lock. Account backups still contain your public keys and addresses.
+                </p>
+              </details>
               <details>
                 <summary>What is gazewallet?</summary>
                 <p>

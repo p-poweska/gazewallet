@@ -10,8 +10,13 @@ import { Change } from '../components/Change'
 import { FiatAmount } from '../components/FiatAmount'
 import { DataStatus } from '../components/DataStatus'
 import { getDataStatus, type MarketQueryState } from '../lib/data-status'
+import { PrivateValue, usePrivacy } from '../components/Privacy'
+import { PortfolioHistory } from '../components/PortfolioHistory'
+import type { PortfolioHistoryState } from '../hooks/use-portfolio-history'
 
 interface Props {
+  accent: string
+  history: PortfolioHistoryState
   views: AccountView[]
   markets: Markets
   currency: Currency
@@ -21,9 +26,10 @@ interface Props {
   onReplace: (accounts: Account[]) => void
 }
 
-export default function Dashboard({ views, markets, currency, marketState, dataEnvironment, onAdd, onReplace }: Props) {
+export default function Dashboard({ accent, history, views, markets, currency, marketState, dataEnvironment, onAdd, onReplace }: Props) {
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const { hidden } = usePrivacy()
 
   const groups = useMemo(() => groupByChain(views, markets), [views, markets])
   const total = useMemo(() => totalFiat(groups), [groups])
@@ -67,15 +73,17 @@ export default function Dashboard({ views, markets, currency, marketState, dataE
       <section className="hero">
         <span className="hero-label">{status.complete ? 'Total portfolio' : 'Known portfolio value'}</span>
         <div className="hero-fiat">
+          <PrivateValue>
           {status.hasValue ? <FiatAmount value={total} currency={currency} /> : '—'}
+          </PrivateValue>
         </div>
-        {change24h !== null && (
+        {!hidden && change24h !== null && (
           <div className="stats">
             <Change label="24h" value={change24h} />
           </div>
         )}
 
-        {status.complete && total > 0 && (
+        {!hidden && status.complete && total > 0 && (
           <div className="alloc">
             <div className="alloc-bar">
               {groups.map((g, i) => {
@@ -110,6 +118,9 @@ export default function Dashboard({ views, markets, currency, marketState, dataE
 
       <section className="add">
         <input
+          type={hidden ? 'password' : 'text'}
+          autoComplete="off"
+          aria-label="Public key or address"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
@@ -143,10 +154,14 @@ export default function Dashboard({ views, markets, currency, marketState, dataE
               </div>
               <div className="asset-amounts">
                 <span className="asset-fiat">
+                  <PrivateValue>
                   {groupStatus.hasValue && g.fiat != null ? <FiatAmount value={g.fiat} currency={currency} /> : '—'}
+                  </PrivateValue>
                 </span>
                 <span className={`asset-crypto ${g.isLoading ? 'pulse' : ''}`}>
+                  <PrivateValue>
                   {g.views.some((v) => v.balance) ? formatAmount(g.amount, g.adapter.displayDecimals) : '—'} {g.adapter.symbol}
+                  </PrivateValue>
                 </span>
               </div>
               {!groupStatus.complete && <span className="data-status-warning">Partial valuation</span>}
@@ -163,6 +178,8 @@ export default function Dashboard({ views, markets, currency, marketState, dataE
           <div className="empty card">No balances found yet.</div>
         )}
       </div>
+
+      <PortfolioHistory history={history} accent={accent} />
 
       <footer className="footer">
         <button onClick={handleExport} disabled={views.length === 0}>
