@@ -28,9 +28,7 @@ export default defineConfig({
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
             proxyReq.setHeader('User-Agent', 'gazewallet (dev)')
-            const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-              .process?.env
-            const key = env?.CG_DEMO_KEY
+            const key = process.env.CG_DEMO_KEY
             if (key) proxyReq.setHeader('x-cg-demo-api-key', key)
           })
         },
@@ -42,6 +40,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+      // Fonts are self-hosted in public/fonts; precache them so the app looks the same offline.
+      workbox: { globPatterns: ['**/*.{js,wasm,css,html,woff2}'] },
       manifest: {
         name: 'gazewallet',
         short_name: 'gazewallet',

@@ -17,6 +17,7 @@ import { portfolioOverlapWarning } from '../lib/account-overlap'
 import { PriceEffect } from '../components/PriceEffect'
 import { BackupControls } from '../components/BackupControls'
 import type { BackupPayload, BackupSettings } from '../lib/backup'
+import { IrisDial, type IrisSegment } from '../components/IrisDial'
 
 interface Props {
   accent: string
@@ -25,13 +26,15 @@ interface Props {
   markets: Markets
   currency: Currency
   marketState: MarketQueryState
+  /** Any price or balance request in flight; drives the iris scan sweep. */
+  scanning: boolean
   dataEnvironment: { online: boolean; now: number }
   onAdd: (input: string, label?: string) => string | null
   backupSettings: BackupSettings
   onImport: (backup: BackupPayload, mode: 'merge' | 'replace', restoreSettings: boolean) => void
 }
 
-export default function Dashboard({ accent, history, views, markets, currency, marketState, dataEnvironment, onAdd, backupSettings, onImport }: Props) {
+export default function Dashboard({ accent, history, views, markets, currency, marketState, scanning, dataEnvironment, onAdd, backupSettings, onImport }: Props) {
   const { hidden } = usePrivacy()
 
   const groups = useMemo(() => groupByChain(views, markets), [views, markets])
@@ -40,46 +43,35 @@ export default function Dashboard({ accent, history, views, markets, currency, m
   const priceEffect = status.complete ? portfolioPriceEffect24h(groups, markets) : null
   const loading = views.some((v) => v.isLoading)
   const overlap = portfolioOverlapWarning(views)
+  // Allocation (iris colours + legend) only for a complete, visible valuation.
+  const showAllocation = !hidden && status.complete && total > 0
+  const segments: IrisSegment[] = showAllocation
+    ? groups.map((g, i) => ({ id: g.adapter.id, share: (g.fiat ?? 0) / total, color: allocShade(i) }))
+    : []
 
   return (
     <>
       <section className="hero">
-        <span className="hero-label">{status.complete ? 'Total portfolio' : 'Known portfolio value'}</span>
-        <div className="hero-fiat">
-          <PrivateValue>
-          {status.hasValue ? <FiatAmount value={total} currency={currency} /> : '—'}
-          </PrivateValue>
-        </div>
+        <IrisDial segments={segments} scanning={scanning}>
+          <span className="hero-label">{status.complete ? 'Total portfolio' : 'Known portfolio value'}</span>
+          <div className="hero-fiat">
+            <PrivateValue>
+            {status.hasValue ? <FiatAmount value={total} currency={currency} roll /> : '—'}
+            </PrivateValue>
+          </div>
+        </IrisDial>
         <PriceEffect effect={priceEffect} currency={currency} />
 
-        {!hidden && status.complete && total > 0 && (
-          <div className="alloc">
-            <div className="alloc-bar">
-              {groups.map((g, i) => {
-                const pct = ((g.fiat ?? 0) / total) * 100
-                return (
-                  <span
-                    key={g.adapter.id}
-                    className="alloc-seg"
-                    style={{ width: `${pct}%`, background: allocShade(i) }}
-                    title={`${g.adapter.name} ${pct.toFixed(1)}%`}
-                  />
-                )
-              })}
-            </div>
-            <ul className="alloc-legend">
-              {groups.map((g, i) => {
-                const pct = ((g.fiat ?? 0) / total) * 100
-                return (
-                  <li key={g.adapter.id} className="alloc-item">
-                    <span className="alloc-dot" style={{ background: allocShade(i) }} />
-                    <span className="alloc-sym">{g.adapter.symbol}</span>
-                    <span className="alloc-pct">{pct.toFixed(1)}%</span>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
+        {showAllocation && (
+          <ul className="alloc-legend">
+            {segments.map((s, i) => (
+              <li key={s.id} className="alloc-item">
+                <span className="alloc-dot" style={{ background: s.color }} />
+                <span className="alloc-sym">{groups[i].adapter.symbol}</span>
+                <span className="alloc-pct">{(s.share * 100).toFixed(1)}%</span>
+              </li>
+            ))}
+          </ul>
         )}
 
         <DataStatus status={status} />
@@ -109,7 +101,7 @@ export default function Dashboard({ accent, history, views, markets, currency, m
               <div className="asset-amounts">
                 <span className="asset-fiat">
                   <PrivateValue>
-                  {groupStatus.hasValue && g.fiat != null ? <FiatAmount value={g.fiat} currency={currency} /> : '—'}
+                  {groupStatus.hasValue && g.fiat != null ? <FiatAmount value={g.fiat} currency={currency} roll /> : '—'}
                   </PrivateValue>
                 </span>
                 <span className={`asset-crypto ${g.isLoading ? 'pulse' : ''}`}>

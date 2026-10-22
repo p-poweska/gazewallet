@@ -82,7 +82,7 @@ export default function Landing({ currency, markets }: Props) {
             )}
           </div>
           <div className="lp-price-value">
-            {market ? <FiatAmount value={market.price} currency={currency} /> : '—'}
+            {market ? <FiatAmount value={market.price} currency={currency} roll /> : '—'}
           </div>
           {market && (market.low24h !== null || market.high24h !== null) && (
             <div className="lp-range">
