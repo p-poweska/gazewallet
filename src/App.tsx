@@ -16,6 +16,8 @@ import { PrivacyProvider, PrivacyToggle, usePrivacy } from './components/Privacy
 import { usePortfolioHistory } from './hooks/use-portfolio-history'
 import { accountIdentity } from './lib/account-overlap'
 import { mergeAccounts, type BackupPayload } from './lib/backup'
+import { marketUpdatedAt, remainingPriceFreshness } from './lib/market-freshness'
+import { DATA_FRESHNESS_MS } from './lib/data-status'
 
 // CoinGecko ids for every supported chain — small list, fetched in one call.
 const COIN_IDS = ADAPTERS.map((a) => a.coingeckoId)
@@ -51,8 +53,16 @@ function AppContent() {
   const marketsQuery = useQuery({
     queryKey: ['markets', currency],
     queryFn: () => fetchMarkets(currency, COIN_IDS),
+    staleTime: (query) => remainingPriceFreshness(query.state.data, query.state.dataUpdatedAt, query.state.dataUpdatedAt),
+    refetchInterval: (query) => query.state.status === 'error' ? DATA_FRESHNESS_MS :
+      Math.max(15000, remainingPriceFreshness(query.state.data, query.state.dataUpdatedAt, Date.now())),
   })
   const markets = marketsQuery.data ?? {}
+  const marketState = {
+    isFetching: marketsQuery.isFetching,
+    isError: marketsQuery.isError,
+    dataUpdatedAt: marketUpdatedAt(markets, marketsQuery.dataUpdatedAt),
+  }
 
   // One balance query per account, keyed by chain+value so caches survive reorders.
   const balanceQueries = useQueries({
@@ -78,7 +88,7 @@ function AppContent() {
       }),
     [accounts, balanceQueries],
   )
-  const history = usePortfolioHistory(views, markets, marketsQuery, currency, dataEnvironment.online)
+  const history = usePortfolioHistory(views, markets, marketState, currency, dataEnvironment.online)
 
   function addAccount(input: string, label?: string): string | null {
     try {
@@ -166,7 +176,7 @@ function AppContent() {
                 views={views}
                 markets={markets}
                 currency={currency}
-                marketState={marketsQuery}
+                marketState={marketState}
                 dataEnvironment={dataEnvironment}
                 onAdd={addAccount}
                 backupSettings={{ currency, accent, privacyHidden: privacy.hidden }}
@@ -181,7 +191,7 @@ function AppContent() {
                 views={views}
                 markets={markets}
                 currency={currency}
-                marketState={marketsQuery}
+                marketState={marketState}
                 dataEnvironment={dataEnvironment}
                 onAdd={addAccount}
                 onRemove={removeAccount}

@@ -78,7 +78,20 @@ For that command, supply `CG_DEMO_KEY` in a local `.dev.vars` file (ignored by G
 
 Pages deploys `functions/` alongside the static build. No database is required. Keep `public/_headers`, `public/_redirects` and `wrangler.toml` in the project. Camera access and service workers require a secure context (HTTPS or localhost).
 
-The app shell is precached by the service worker. API results use the persisted query cache; successful proxy responses have a short HTTP cache lifetime, and non-200 responses use `no-store`. A response's `Cache-Control` header alone does not guarantee shared caching at Cloudflare's edge.
+The app shell is precached by the service worker. API results use the persisted query cache. Blockchain proxies retain their short HTTP cache lifetimes; prices use the explicit shared cache described below.
+
+### Shared price cache
+
+The `/cg/api/v3/coins/markets` Pages Function uses `caches.default` to share validated CoinGecko price responses for **300 seconds**. No additional Cloudflare storage binding or database is required. The existing `CG_DEMO_KEY` secret is still required on a cache miss.
+
+- Cache keys contain the deployment origin, supported currency, sorted Bitcoin/Ethereum IDs and normalized `24h,7d,30d` periods. Unknown endpoints, parameters, coins and currencies are rejected before contacting CoinGecko. `/cg/api/v3/ping` remains available as an uncached diagnostic endpoint.
+- Only complete, valid market JSON from status 200 is cached. Provider errors, timeouts and malformed data are not cached; client responses use `no-store` to avoid another browser HTTP cache layer. The app's explicit local query persistence still works offline.
+- `X-Price-Cache` reports `HIT`, `MISS` or `BYPASS` (cache unavailable). `X-Price-Fetched-At` is the original proxy fetch time in Unix milliseconds, not the provider's exchange tick time. A hit retains that timestamp; the frontend uses it for freshness, the next refresh and history eligibility.
+- API keys, cookies, client IP headers and wallet data are excluded from cached responses and cache keys. The function does not forward incoming request headers to CoinGecko.
+- Cache read/write failures do not prevent valid upstream prices from being returned. During a provider outage, the app retains its last locally saved data and marks the failed update; the proxy does not serve expired prices as fresh.
+- Cloudflare Cache API entries are local to a data center and may be evicted early. Other data centers, deployment origins or simultaneous cold requests can still fetch separately. This reduces provider calls but is not a global request quota or a guarantee of one request every five minutes.
+
+After deployment, inspect the price request in browser DevTools: the first successful request should be `MISS`, and a subsequent request for the same prices should be `HIT` with the same `X-Price-Fetched-At`. USD and PLN have separate entries. Vite's development proxy talks directly to CoinGecko and does not emulate the shared cache; use Wrangler Pages dev or a Pages deployment to exercise the function.
 
 ## Architecture and data sources
 

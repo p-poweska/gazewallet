@@ -1,6 +1,8 @@
 // Wszystkie zapytania idą do własnego originu (/api), nie wprost do mempool.space.
 // To omija CORS (przeglądarka blokuje cross-origin) i ukrywa IP użytkownika.
 // Dev: proxy serwera Vite. Prod: Cloudflare Pages Function (functions/api).
+import { parseMarketRows, PRICE_FETCHED_AT_HEADER } from './market-data'
+
 const BASE = '/api'
 
 export interface AddressStats {
@@ -29,6 +31,8 @@ export async function fetchAddress(address: string): Promise<AddressStats> {
 }
 
 export interface Market {
+  /** Original proxy fetch time, preserved on cache hits and browser reloads. */
+  fetchedAt?: number
   price: number
   change24h: number | null
   change7d: number | null
@@ -40,28 +44,23 @@ export interface Market {
 /** Keyed by CoinGecko id (e.g. 'bitcoin', 'ethereum'). */
 export type Markets = Record<string, Market>
 
-interface CoinGeckoMarket {
-  id: string
-  current_price: number
-  high_24h: number | null
-  low_24h: number | null
-  price_change_percentage_24h_in_currency: number | null
-  price_change_percentage_7d_in_currency: number | null
-  price_change_percentage_30d_in_currency: number | null
-}
-
 // Prices + change stats from CoinGecko, in the chosen currency, for many coins.
 export async function fetchMarkets(currency: string, ids: string[]): Promise<Markets> {
   const vs = currency.toLowerCase()
   const idsParam = encodeURIComponent(ids.join(','))
   const url = `/cg/api/v3/coins/markets?vs_currency=${vs}&ids=${idsParam}&price_change_percentage=24h%2C7d%2C30d`
-  const res = await fetch(url)
+  const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) throw new Error(`Price API error (${res.status})`)
-  const arr = (await res.json()) as CoinGeckoMarket[]
+  const arr = parseMarketRows(await res.json(), ids)
+  const now = Date.now()
+  const header = res.headers.get(PRICE_FETCHED_AT_HEADER)
+  // Vite talks directly to CoinGecko, which does not send our proxy header.
+  const fetchedAt = header === null ? now : Number(header)
+  if (!Number.isFinite(fetchedAt) || fetchedAt <= 0 || fetchedAt > now + 60000) throw new Error('Invalid price timestamp')
   const out: Markets = {}
   for (const d of arr) {
-    if (typeof d.current_price !== 'number' || !Number.isFinite(d.current_price) || d.current_price < 0) continue
     out[d.id] = {
+      fetchedAt: Math.min(fetchedAt, now),
       price: d.current_price,
       change24h: d.price_change_percentage_24h_in_currency,
       change7d: d.price_change_percentage_7d_in_currency,
