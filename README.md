@@ -33,7 +33,7 @@ This app cannot sign transactions or spend funds. Never enter a seed phrase or p
 
 ## Run locally
 
-Use Node.js 22 LTS and npm.
+Use Node.js 22 LTS (22.12 or newer) and npm. `.node-version` selects Node 22 for supported build environments; `package.json` declares the minimum supported runtime.
 
 ```sh
 git clone https://github.com/p-poweska/gazewallet.git
@@ -72,7 +72,7 @@ For that command, supply `CG_DEMO_KEY` in a local `.dev.vars` file (ignored by G
 
 1. Connect this repository to a **Pages** project, not a Workers project.
 2. Choose the branch to deploy. `develop` contains ongoing work; `main` is the stable line.
-3. Set the build command to `npm run build` and output directory to `dist`, with the repository root as the project root. Use Node.js 22.
+3. Set the build command to `npm run build` and output directory to `dist`, with the repository root as the project root. Use Node.js 22.12 or newer. `.node-version` selects the Node 22 line; remove any older `NODE_VERSION` override in the Pages settings.
 4. Add a secret named `CG_DEMO_KEY` in the Pages project's environment settings for Production and Preview as needed.
 5. Create a new deployment after changing secrets. Existing deployments do not pick them up retroactively.
 

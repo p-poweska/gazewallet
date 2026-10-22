@@ -28,9 +28,7 @@ export default defineConfig({
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
             proxyReq.setHeader('User-Agent', 'gazewallet (dev)')
-            const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-              .process?.env
-            const key = env?.CG_DEMO_KEY
+            const key = process.env.CG_DEMO_KEY
             if (key) proxyReq.setHeader('x-cg-demo-api-key', key)
           })
         },
