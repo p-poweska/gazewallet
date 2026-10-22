@@ -32,11 +32,15 @@ export const onRequestGet = async ({ request, params, env }: Context): Promise<R
 
   const upstream = await fetch(url.toString(), { headers })
 
+  // Cache tylko udane odpowiedzi. Błędy (403/5xx) z 'no-store', żeby chwilowa
+  // awaria upstreamu nie zacementowała się na brzegu/w przeglądarce na 60 s.
+  const cache = upstream.status === 200 ? 'public, max-age=60' : 'no-store'
+
   return new Response(upstream.body, {
     status: upstream.status,
     headers: {
       'content-type': upstream.headers.get('content-type') ?? 'application/json',
-      'cache-control': 'public, max-age=60',
+      'cache-control': cache,
     },
   })
 }

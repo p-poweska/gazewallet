@@ -24,7 +24,7 @@ export function groupByChain(views: AccountView[], markets: Markets): ChainGroup
       adapter,
       views: chainViews,
       amount,
-      fiat: price != null ? amount * price : null,
+      fiat: price != null && Number.isFinite(price) && price >= 0 ? amount * price : null,
       isLoading: chainViews.some((v) => v.isLoading),
       isError: chainViews.some((v) => v.isError),
     }
@@ -38,20 +38,26 @@ export function totalFiat(groups: ChainGroup[]): number {
 
 // Weighted 24h change of the whole portfolio value, in percent.
 // Reconstructs each asset's value 24h ago from its 24h % change, then compares
-// the totals. Returns null if no asset has both a price and a 24h change.
+// the totals. Returns null if any contributing asset has incomplete data.
 export function portfolioChange24h(groups: ChainGroup[], markets: Markets): number | null {
+  return portfolioPriceEffect24h(groups, markets)?.percent ?? null
+}
+
+export function portfolioPriceEffect24h(groups: ChainGroup[], markets: Markets): { percent: number; delta: number } | null {
   let now = 0
   let prev = 0
   let any = false
   for (const g of groups) {
+    if (g.views.some((v) => !v.balance) || g.fiat === null) return null
+    if (g.fiat === 0) continue
     const change = markets[g.adapter.coingeckoId]?.change24h
-    if (g.fiat == null || change == null) continue
+    if (change == null || !Number.isFinite(change) || change <= -100) return null
     now += g.fiat
     prev += g.fiat / (1 + change / 100)
     any = true
   }
   if (!any || prev === 0) return null
-  return ((now - prev) / prev) * 100
+  return { percent: ((now - prev) / prev) * 100, delta: now - prev }
 }
 
 export function isChainId(value: string | undefined): value is ChainId {

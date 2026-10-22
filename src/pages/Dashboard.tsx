@@ -1,81 +1,58 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { Markets } from '../lib/api'
-import type { Account, AccountView } from '../lib/chains/types'
-import { allocShade, groupByChain, portfolioChange24h, totalFiat } from '../lib/portfolio'
-import { exportJson, importJson } from '../lib/store'
+import type { AccountView } from '../lib/chains/types'
+import { allocShade, groupByChain, portfolioPriceEffect24h, totalFiat } from '../lib/portfolio'
 import type { Currency } from '../lib/currency'
 import { formatAmount } from '../lib/format'
 import { Change } from '../components/Change'
 import { FiatAmount } from '../components/FiatAmount'
+import { DataStatus } from '../components/DataStatus'
+import { getDataStatus, type MarketQueryState } from '../lib/data-status'
+import { PrivateValue, usePrivacy } from '../components/Privacy'
+import { PortfolioHistory } from '../components/PortfolioHistory'
+import type { PortfolioHistoryState } from '../hooks/use-portfolio-history'
+import { AddAccount } from '../components/AddAccount'
+import { portfolioOverlapWarning } from '../lib/account-overlap'
+import { PriceEffect } from '../components/PriceEffect'
+import { BackupControls } from '../components/BackupControls'
+import type { BackupPayload, BackupSettings } from '../lib/backup'
 
 interface Props {
+  accent: string
+  history: PortfolioHistoryState
   views: AccountView[]
   markets: Markets
   currency: Currency
-  fetching: boolean
-  onAdd: (input: string) => string | null
-  onReplace: (accounts: Account[]) => void
+  marketState: MarketQueryState
+  dataEnvironment: { online: boolean; now: number }
+  onAdd: (input: string, label?: string) => string | null
+  backupSettings: BackupSettings
+  onImport: (backup: BackupPayload, mode: 'merge' | 'replace', restoreSettings: boolean) => void
 }
 
-export default function Dashboard({ views, markets, currency, fetching, onAdd, onReplace }: Props) {
-  const [input, setInput] = useState('')
-  const [error, setError] = useState<string | null>(null)
+export default function Dashboard({ accent, history, views, markets, currency, marketState, dataEnvironment, onAdd, backupSettings, onImport }: Props) {
+  const { hidden } = usePrivacy()
 
   const groups = useMemo(() => groupByChain(views, markets), [views, markets])
   const total = useMemo(() => totalFiat(groups), [groups])
-  const change24h = useMemo(() => portfolioChange24h(groups, markets), [groups, markets])
+  const status = getDataStatus(groups, marketState, dataEnvironment.online, dataEnvironment.now)
+  const priceEffect = status.complete ? portfolioPriceEffect24h(groups, markets) : null
   const loading = views.some((v) => v.isLoading)
-  const lastUpdated = useMemo(() => {
-    const times = views.map((v) => v.dataUpdatedAt).filter(Boolean)
-    return times.length ? Math.max(...times) : 0
-  }, [views])
-
-  function add() {
-    setError(null)
-    const err = onAdd(input)
-    if (err) setError(err)
-    else setInput('')
-  }
-
-  function handleExport() {
-    const accounts = views.map((v) => v.account)
-    const blob = new Blob([exportJson(accounts)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'gazewallet-backup.json'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    file.text().then((text) => {
-      try {
-        onReplace(importJson(text))
-      } catch {
-        setError('Could not read the backup file')
-      }
-    })
-    e.target.value = ''
-  }
+  const overlap = portfolioOverlapWarning(views)
 
   return (
     <>
       <section className="hero">
-        <span className="hero-label">Total portfolio</span>
+        <span className="hero-label">{status.complete ? 'Total portfolio' : 'Known portfolio value'}</span>
         <div className="hero-fiat">
-          {total > 0 ? <FiatAmount value={total} currency={currency} /> : '—'}
+          <PrivateValue>
+          {status.hasValue ? <FiatAmount value={total} currency={currency} /> : '—'}
+          </PrivateValue>
         </div>
-        {change24h !== null && (
-          <div className="stats">
-            <Change label="24h" value={change24h} />
-          </div>
-        )}
+        <PriceEffect effect={priceEffect} currency={currency} />
 
-        {total > 0 && (
+        {!hidden && status.complete && total > 0 && (
           <div className="alloc">
             <div className="alloc-bar">
               {groups.map((g, i) => {
@@ -105,37 +82,16 @@ export default function Dashboard({ views, markets, currency, fetching, onAdd, o
           </div>
         )}
 
-        {views.length > 0 && (
-          <div className="hero-status">
-            {fetching ? (
-              <span className="updated">Updating…</span>
-            ) : lastUpdated > 0 ? (
-              <span className="updated">
-                Updated {new Date(lastUpdated).toLocaleTimeString('en-US')} · auto-refreshes
-              </span>
-            ) : null}
-          </div>
-        )}
+        <DataStatus status={status} />
       </section>
 
-      <section className="add">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && add()}
-          placeholder="xpub / bc1… (BTC) or 0x… (ETH)"
-          spellCheck={false}
-          autoCapitalize="off"
-        />
-        <button className="primary" onClick={add}>
-          Add
-        </button>
-      </section>
-      {error && <p className="error">{error}</p>}
+      {overlap && <p className="overlap-warning" role="status">{overlap}</p>}
+      <AddAccount views={views} onAdd={onAdd} />
 
       <div className="assets">
         {groups.map((g) => {
           const m = markets[g.adapter.coingeckoId]
+          const groupStatus = getDataStatus([g], marketState, dataEnvironment.online, dataEnvironment.now)
           return (
             <Link key={g.adapter.id} to={`/app/${g.adapter.id}`} className="card asset-card">
               <div className="asset-head">
@@ -152,12 +108,18 @@ export default function Dashboard({ views, markets, currency, fetching, onAdd, o
               </div>
               <div className="asset-amounts">
                 <span className="asset-fiat">
-                  {g.fiat != null ? <FiatAmount value={g.fiat} currency={currency} /> : '—'}
+                  <PrivateValue>
+                  {groupStatus.hasValue && g.fiat != null ? <FiatAmount value={g.fiat} currency={currency} /> : '—'}
+                  </PrivateValue>
                 </span>
                 <span className={`asset-crypto ${g.isLoading ? 'pulse' : ''}`}>
-                  {formatAmount(g.amount, g.adapter.displayDecimals)} {g.adapter.symbol}
+                  <PrivateValue>
+                  {g.views.some((v) => v.balance) ? formatAmount(g.amount, g.adapter.displayDecimals) : '—'} {g.adapter.symbol}
+                  </PrivateValue>
                 </span>
               </div>
+              {!groupStatus.complete && <span className="data-status-warning">Partial valuation</span>}
+              <DataStatus status={groupStatus} compact />
             </Link>
           )
         })}
@@ -171,15 +133,9 @@ export default function Dashboard({ views, markets, currency, fetching, onAdd, o
         )}
       </div>
 
-      <footer className="footer">
-        <button onClick={handleExport} disabled={views.length === 0}>
-          Export backup
-        </button>
-        <label className="import">
-          Import backup
-          <input type="file" accept="application/json" onChange={handleImport} hidden />
-        </label>
-      </footer>
+      <PortfolioHistory history={history} accent={accent} />
+
+      <BackupControls accounts={views.map((v) => v.account)} settings={backupSettings} onImport={onImport} />
     </>
   )
 }

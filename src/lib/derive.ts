@@ -1,5 +1,5 @@
 import { HDKey } from '@scure/bip32'
-import { base58check, bech32 } from '@scure/base'
+import { base58check, bech32, bech32m } from '@scure/base'
 import { sha256 } from '@noble/hashes/sha256'
 import { ripemd160 } from '@noble/hashes/ripemd160'
 
@@ -21,6 +21,32 @@ export function detectXpubType(key: string): XpubType {
 }
 
 const b58check = base58check(sha256)
+
+export function validateBtcInput(value: string): 'xpub' | 'address' | null {
+  try {
+    if (/^(xpub|ypub|zpub)/.test(value)) {
+      deriveAddresses(value, { count: 1 })
+      return 'xpub'
+    }
+    if (/^[13]/.test(value)) {
+      const decoded = b58check.decode(value)
+      return decoded.length === 21 && (decoded[0] === 0 || decoded[0] === 5) ? 'address' : null
+    }
+    if (/^bc1/i.test(value)) {
+      let decoded: ReturnType<typeof bech32.decode>
+      let modern = false
+      try { decoded = bech32.decode(value as `${string}1${string}`) }
+      catch { decoded = bech32m.decode(value as `${string}1${string}`); modern = true }
+      const version = decoded.words[0]
+      const program = bech32.fromWords(decoded.words.slice(1))
+      if (decoded.prefix !== 'bc' || version > 16 || program.length < 2 || program.length > 40) return null
+      if (version === 0) return !modern && (program.length === 20 || program.length === 32) ? 'address' : null
+      if (!modern || (version === 1 && program.length !== 32)) return null
+      return 'address'
+    }
+  } catch { return null }
+  return null
+}
 
 function hash160(data: Uint8Array): Uint8Array {
   return ripemd160(sha256(data))

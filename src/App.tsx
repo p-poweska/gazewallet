@@ -10,17 +10,28 @@ import { CURRENCIES, loadCurrency, saveCurrency, type Currency } from './lib/cur
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import ChainDetail from './pages/ChainDetail'
+import { useDataEnvironment } from './hooks/use-data-environment'
+import { PrivacyProvider, PrivacyToggle, usePrivacy } from './components/Privacy'
+import { usePortfolioHistory } from './hooks/use-portfolio-history'
+import { accountIdentity } from './lib/account-overlap'
+import { mergeAccounts, type BackupPayload } from './lib/backup'
 
 // CoinGecko ids for every supported chain — small list, fetched in one call.
 const COIN_IDS = ADAPTERS.map((a) => a.coingeckoId)
 
 export default function App() {
+  return <PrivacyProvider><AppContent /></PrivacyProvider>
+}
+
+function AppContent() {
   const [accent, setAccent] = useState<string>(() => loadAccent())
   const [currency, setCurrency] = useState<Currency>(() => loadCurrency())
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(false)
   const [accounts, setAccounts] = useState<Account[]>(() => loadAccounts())
   const queryClient = useQueryClient()
+  const dataEnvironment = useDataEnvironment()
+  const privacy = usePrivacy()
 
   useEffect(() => {
     saveAccounts(accounts)
@@ -59,20 +70,20 @@ export default function App() {
           account,
           balance: q.data,
           isLoading: q.isLoading,
+          isFetching: q.isFetching,
           isError: q.isError,
           dataUpdatedAt: q.dataUpdatedAt,
         }
       }),
     [accounts, balanceQueries],
   )
+  const history = usePortfolioHistory(views, markets, marketsQuery, currency, dataEnvironment.online)
 
-  const fetching =
-    balanceQueries.some((q) => q.isFetching) || marketsQuery.isFetching
-
-  function addAccount(input: string): string | null {
+  function addAccount(input: string, label?: string): string | null {
     try {
-      const account = makeAccount(input)
-      if (accounts.some((a) => a.chain === account.chain && a.value === account.value)) {
+      const account = makeAccount(input, label)
+      if (accounts.length >= 1000) return 'Maximum 1000 watched accounts'
+      if (accounts.some((a) => accountIdentity(a) === accountIdentity(account))) {
         return 'This key/address is already on the list'
       }
       setAccounts((prev) => [...prev, account])
@@ -87,14 +98,24 @@ export default function App() {
   }
 
   function renameAccount(id: string, label: string) {
-    const trimmed = label.trim()
+    const trimmed = label.trim().slice(0, 120)
     setAccounts((prev) =>
       prev.map((a) => (a.id === id ? { ...a, label: trimmed || undefined } : a)),
     )
   }
 
-  function replaceAccounts(next: Account[]) {
+  function restoreBackup(backup: BackupPayload, mode: 'merge' | 'replace', restoreSettings: boolean) {
+    const next = mode === 'merge' ? mergeAccounts(accounts, backup.accounts) : backup.accounts
+    const settings = restoreSettings ? backup.settings : undefined
+    try {
+      saveAccounts(next)
+      if (settings) { saveCurrency(settings.currency); saveAccent(settings.accent) }
+    } catch {
+      try { saveAccounts(accounts); saveCurrency(currency); saveAccent(accent) } catch { /* Storage may remain unavailable. */ }
+      throw new Error('Could not save the backup in this browser. Check available storage and retry.')
+    }
     setAccounts(next)
+    if (settings) { setCurrency(settings.currency); setAccent(settings.accent); privacy.setHidden(settings.privacyHidden) }
   }
 
   function retryAccount(account: Account) {
@@ -113,6 +134,7 @@ export default function App() {
             </div>
           </Link>
           <div className="header-actions">
+            <PrivacyToggle />
             <button
               className="icon-btn"
               onClick={() => setFaqOpen(true)}
@@ -138,12 +160,16 @@ export default function App() {
             path="/app"
             element={
               <Dashboard
+                accent={accent}
+                history={history}
                 views={views}
                 markets={markets}
                 currency={currency}
-                fetching={fetching}
+                marketState={marketsQuery}
+                dataEnvironment={dataEnvironment}
                 onAdd={addAccount}
-                onReplace={replaceAccounts}
+                backupSettings={{ currency, accent, privacyHidden: privacy.hidden }}
+                onImport={restoreBackup}
               />
             }
           />
@@ -154,7 +180,8 @@ export default function App() {
                 views={views}
                 markets={markets}
                 currency={currency}
-                fetching={fetching}
+                marketState={marketsQuery}
+                dataEnvironment={dataEnvironment}
                 onAdd={addAccount}
                 onRemove={removeAccount}
                 onRename={renameAccount}
@@ -227,6 +254,47 @@ export default function App() {
               </button>
             </div>
             <div className="faq">
+              <details>
+                <summary>How do recent transactions work?</summary>
+                <p>Recent transactions are combined across the watched addresses and deduplicated by transaction ID. Amounts show net movements, including fees paid by watched addresses. Transfers between watched addresses are marked as internal. Bitcoin transactions with mixed inputs show only the watched net movement, not the entire transaction fee.</p>
+                <p>Ethereum lists native transactions and gas fees, not ERC-20 or contract-internal transfers. This is a recent activity view, not a complete transaction archive.</p>
+              </details>
+              <details>
+                <summary>What is the 24h price effect?</summary>
+                <p>It compares the value of your current holdings at current prices with their value at prices 24 hours ago. It does not account for purchases, deposits or withdrawals during that period and is not investment return or profit.</p>
+              </details>
+              <details>
+                <summary>How do QR scanning and backups protect my data?</summary>
+                <p>QR images and camera frames are decoded locally. Camera permission is requested only when you choose Use camera, and the camera stops when the scanner closes. Payment QR codes are read only for their destination; no transaction is sent.</p>
+                <p>Backups contain accounts, labels and settings, not history or API caches. You can encrypt a backup with a password using AES-256-GCM and PBKDF2-SHA256. The password never leaves your browser and cannot be recovered. Imports are validated and previewed before you choose Merge or Replace.</p>
+              </details>
+              <details>
+                <summary>How does portfolio history work?</summary>
+                <p>
+                  History begins with your first complete, up-to-date valuation. At most one
+                  observation is kept per five-minute interval while the app is open. Missing,
+                  offline and failed updates are not recorded. Gaps are not backfilled.
+                </p>
+                <p>
+                  Each currency and list of watched accounts has its own series, so changing
+                  currency or adding/removing accounts does not rewrite past values. Renaming
+                  an account does not start a new series. Changes include deposits and withdrawals;
+                  they are not investment returns.
+                </p>
+                <p>
+                  Observations are stored in IndexedDB on this device for up to 400 days and are
+                  not included in account backups. Clearing browser data removes them. The trash
+                  button deletes history without removing your watched accounts.
+                </p>
+              </details>
+              <details>
+                <summary>What does privacy mode hide?</summary>
+                <p>
+                  The eye button hides your balances, addresses, allocation and portfolio history
+                  on every screen. Your choice is remembered on this device. It is a visual privacy
+                  setting, not encryption or a password lock. Account backups still contain your public keys and addresses.
+                </p>
+              </details>
               <details>
                 <summary>What is gazewallet?</summary>
                 <p>

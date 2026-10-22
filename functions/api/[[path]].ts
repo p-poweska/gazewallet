@@ -22,11 +22,14 @@ export const onRequestGet = async ({ request, params }: Context): Promise<Respon
     },
   })
 
+  // Cache tylko udane odpowiedzi; błędy z 'no-store', by nie utrwalać awarii.
+  const cache = upstream.status === 200 ? 'public, max-age=30' : 'no-store'
+
   return new Response(upstream.body, {
     status: upstream.status,
     headers: {
       'content-type': upstream.headers.get('content-type') ?? 'application/json',
-      'cache-control': 'public, max-age=30',
+      'cache-control': cache,
     },
   })
 }
