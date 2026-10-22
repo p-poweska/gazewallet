@@ -12,7 +12,8 @@ export function formatFiat(value: number, currency: string): string {
   return value.toLocaleString('en-US', {
     style: 'currency',
     currency,
-    maximumFractionDigits: value < 10 ? 4 : 2,
+    // Extra precision only for small magnitudes, so losses keep cents like gains do.
+    maximumFractionDigits: Math.abs(value) < 10 ? 4 : 2,
   })
 }
 
