@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
+import { MessageSquare } from 'lucide-react'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchMarkets } from './lib/api'
 import { ADAPTERS, getAdapter, makeAccount } from './lib/chains'
@@ -190,6 +191,15 @@ function AppContent() {
             }
           />
         </Routes>
+        <footer className="site-footer">
+          <a href="https://github.com/p-poweska/gazewallet/issues/new/choose" target="_blank" rel="noopener noreferrer">
+            <MessageSquare size={15} aria-hidden="true" />
+            Report a bug or suggest a feature
+          </a>
+          <a href="https://www.coingecko.com/en/api" target="_blank" rel="noopener noreferrer">
+            Prices powered by CoinGecko
+          </a>
+        </footer>
       </main>
 
       {settingsOpen && (

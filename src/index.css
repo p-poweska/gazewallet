@@ -38,6 +38,34 @@ body {
   padding: 28px 16px calc(40px + env(safe-area-inset-bottom));
 }
 
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 20px;
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.site-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.site-footer a:hover,
+.site-footer a:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.site-footer svg { flex-shrink: 0; }
+
 /* Header */
 .header {
   display: flex;
