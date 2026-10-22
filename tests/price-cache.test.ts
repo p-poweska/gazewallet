@@ -33,6 +33,8 @@ function harness(t: TestContext) {
   t.after(() => { if (original) Object.defineProperty(globalThis, 'caches', original); else Reflect.deleteProperty(globalThis, 'caches') })
   t.mock.method(Date, 'now', () => now)
   t.mock.method(globalThis, 'fetch', async (url: string | URL | Request, init?: RequestInit) => {
+    // Mirror the Workers runtime, which throws on redirect modes other than follow/manual.
+    if (init?.redirect && init.redirect !== 'follow' && init.redirect !== 'manual') throw new TypeError(`Invalid redirect value: ${init.redirect}`)
     calls++; upstream.push({ url: new URL(String(url)), init }); return next()
   })
   async function request(search = query, path = 'api/v3/coins/markets', origin = 'https://wallet.example', secret: string | undefined = 'test-key') {
@@ -181,4 +183,14 @@ test('a recently received old price is marked stale and cannot create fresh hist
   assert.equal(status.kind, 'cached')
   assert.equal(status.oldestUpdatedAt, START)
   assert.equal(createSnapshot({ accounts: [account], assets: [{ chain: 'btc', amount: 1, fiat: 60000 }], currency: 'USD', status, sourceTimes: [START, now], now }), null)
+})
+
+test('upstream redirects are not followed, cached or reported as prices', async (t) => {
+  const h = harness(t)
+  h.respond(() => new Response(null, { status: 302, headers: { Location: 'https://elsewhere.example/markets' } }))
+  const response = await h.request()
+  assert.equal(response.status, 502)
+  assert.equal(h.upstream[0].init?.redirect, 'manual')
+  assert.equal(h.calls(), 1)
+  assert.equal(h.writes.length, 0)
 })

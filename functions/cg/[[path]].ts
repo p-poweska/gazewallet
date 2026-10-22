@@ -75,7 +75,9 @@ export const onRequestGet = async ({ request, params, env, waitUntil }: Context)
   // Keep the previously working authentication method; never expose this URL.
   url.searchParams.set('x_cg_demo_api_key', env.CG_DEMO_KEY.trim())
   try {
-    const upstream = await fetch(url, { headers, redirect: 'error', signal: AbortSignal.timeout(10000) })
+    // Workers reject redirect: 'error' with a TypeError. 'manual' keeps redirects unfollowed;
+    // a 3xx then fails the status check below.
+    const upstream = await fetch(url, { headers, redirect: 'manual', signal: AbortSignal.timeout(10000) })
     if (upstream.status !== 200) {
       // Do not forward provider error bodies: they may contain request details.
       return errorResponse(upstream.status >= 400 && upstream.status <= 599 ? upstream.status : 502, 'Price provider request failed')
