@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { Eye, EyeOff } from 'lucide-react'
 
 const KEY = 'gazewallet:privacy:v1'
 const PrivacyContext = createContext({ hidden: false, toggle: () => {}, setHidden: (_value: boolean) => {} })
@@ -42,7 +41,11 @@ export function PrivacyToggle() {
   const label = hidden ? 'Show balances' : 'Hide balances'
   return (
     <button type="button" className="icon-btn" onClick={toggle} aria-label={label} title={label} aria-pressed={hidden}>
-      {hidden ? <EyeOff size={19} aria-hidden /> : <Eye size={19} aria-hidden />}
+      {/* The lid closes over the pupil in privacy mode, matching the logo. */}
+      <svg className={`eye-icon${hidden ? ' eye-icon--closed' : ''}`} viewBox="-12 -12 24 24" aria-hidden="true">
+        <path className="eye-icon-lid" d="M-9 0Q0 -11 9 0Q0 11 -9 0Z" />
+        <circle className="eye-icon-pupil" r="2.6" />
+      </svg>
     </button>
   )
 }

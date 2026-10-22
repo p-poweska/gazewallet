@@ -96,7 +96,7 @@ export default function ChainDetail({
         <div className="hero-fiat">
           <PrivateValue>
           {status.hasValue ? (
-            <FiatAmount value={amount * price} currency={currency} />
+            <FiatAmount value={amount * price} currency={currency} roll />
           ) : '—'}
           </PrivateValue>
         </div>

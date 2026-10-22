@@ -1,3 +1,40 @@
+/* Fonty hostowane lokalnie (CSP: default-src 'self'). Licencje OFL w public/fonts. */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/bricolage-grotesque-latin-opsz-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/bricolage-grotesque-latin-ext-opsz-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
 :root {
   color-scheme: dark;
   --accent: #f7931a;
@@ -9,8 +46,9 @@
   --muted: #7d8896;
   --error: #ff6b6b;
   --radius: 16px;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Roboto Mono", monospace;
+  font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", "Roboto Mono", monospace;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 * {
@@ -83,28 +121,61 @@ body {
   color: inherit;
 }
 
-.logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--accent);
-  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 50%, transparent);
-  position: relative;
+/* Logo: oko (EyeLogo.tsx) */
+.eye-logo {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  overflow: visible;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 28%, transparent));
 }
 
-.logo::after {
-  content: "";
-  position: absolute;
-  inset: 11px;
-  border-radius: 50%;
-  border: 3px solid var(--bg);
+.eye-logo-frame { fill: var(--panel-solid); stroke: var(--border); }
+.eye-logo-sclera { fill: #0a0e16; }
+.eye-logo-striae { stroke: rgba(0, 0, 0, 0.28); stroke-width: 0.6; }
+.eye-logo-glint { fill: #fff; opacity: 0.85; }
+.eye-logo-lid {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 70%, #fff);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
 }
+
+.eye-logo-pupil {
+  fill: #04060a;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.4s var(--ease-out);
+}
+
+/* Źrenica rozszerza się, gdy trwa pobieranie danych */
+.eye-logo--busy .eye-logo-pupil { transform: scale(1.35); }
+
+/* Przycisk prywatności: powieka zamyka się nad źrenicą */
+.eye-icon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+}
+
+.eye-icon-lid,
+.eye-icon-pupil {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.28s var(--ease-out), opacity 0.2s ease;
+}
+
+.eye-icon--closed .eye-icon-lid { transform: scaleY(0.08); }
+.eye-icon--closed .eye-icon-pupil { transform: scale(0.2); opacity: 0; }
 
 .header h1 {
   margin: 0;
   font-size: 1.4rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-weight: 720;
+  letter-spacing: -0.035em;
 }
 
 .subtitle {
@@ -122,6 +193,52 @@ body {
   font-family: var(--mono);
   color: var(--muted);
   white-space: nowrap;
+  animation: fog-in 0.45s ease;
+}
+
+/* Ukryta wartość "zachodzi mgłą" zamiast znikać skokowo */
+@keyframes fog-in {
+  from { filter: blur(6px); opacity: 0; }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Licznik (FiatAmount roll): każda cyfra to bęben 0–9 */
+.odo { display: inline-block; }
+.odo-track {
+  display: inline-flex;
+  align-items: baseline;
+  --odo-h: 1.15em;
+}
+
+.odo-digit,
+.odo-sep {
+  display: inline-block;
+  height: var(--odo-h);
+  line-height: var(--odo-h);
+  overflow: hidden;
+  white-space: pre;
+}
+
+.odo-reel {
+  display: flex;
+  flex-direction: column;
+  transition: transform 1s var(--ease-out);
+}
+
+.odo-reel > span {
+  height: var(--odo-h);
+  line-height: var(--odo-h);
 }
 
 .account-form { margin: 22px 0; }
@@ -378,6 +495,133 @@ body {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--text);
+}
+
+/* Dashboard — tęczówka (IrisDial.tsx): włókna i łuk pokazują alokację, suma w źrenicy */
+.iris {
+  position: relative;
+  width: min(100%, 340px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  container-type: inline-size;
+}
+
+.iris-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.iris-edge {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: iris-rotate 140s linear infinite;
+}
+
+.iris-edge text {
+  font-family: var(--mono);
+  font-size: 7.4px;
+  letter-spacing: 1.55px;
+  fill: var(--muted);
+}
+
+.iris-ticks line { stroke: rgba(168, 190, 225, 0.2); stroke-width: 1; }
+.iris-ticks line.major { stroke: color-mix(in srgb, var(--text) 40%, transparent); }
+.iris-track { fill: none; stroke: var(--border); stroke-width: 5; }
+
+.iris-arc {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 1.1s var(--ease-out), stroke-dashoffset 1.1s var(--ease-out);
+}
+
+.iris-body {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: iris-breathe 7s ease-in-out infinite;
+}
+
+.iris-fibers line {
+  stroke: var(--accent);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  transform-box: view-box;
+  transform-origin: 0 0;
+  transition: stroke 0.6s ease, opacity 0.6s ease;
+  animation: iris-fiber-in 1s var(--ease-out) both;
+  animation-delay: calc(var(--i) * 3ms + 100ms);
+}
+
+/* Bez alokacji (tryb prywatności, dane częściowe) tęczówka jest neutralna */
+.iris--neutral .iris-fibers line {
+  stroke: var(--muted) !important;
+  opacity: 0.28;
+}
+
+.iris-pupil { fill: var(--bg); stroke: rgba(168, 190, 225, 0.2); }
+.iris-glint { fill: #fff; opacity: 0.045; }
+
+/* Skan: jeden obrót przy każdym pobieraniu danych (isFetching) */
+.iris-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(from 0deg, transparent 0 280deg, color-mix(in srgb, var(--accent) 55%, transparent) 358deg, transparent 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 57%, #000 58% 79%, transparent 80%);
+  mask: radial-gradient(circle, transparent 0 57%, #000 58% 79%, transparent 80%);
+  animation: iris-sweep 1.25s var(--ease-out) infinite;
+}
+
+.iris-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.iris .hero-fiat {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 8cqi;
+  letter-spacing: -0.04em;
+}
+
+/* Długie kwoty (np. PLN 1,234,567.89) zmniejszają się, by zmieścić się w źrenicy */
+.iris .hero-fiat .odo { font-size: min(1em, calc(86cqi / var(--chars))); }
+.iris .hero-fiat .private-value { font-size: 0.7em; }
+
+@keyframes iris-rotate { to { transform: rotate(360deg); } }
+@keyframes iris-breathe { 50% { transform: scale(1.012); } }
+@keyframes iris-fiber-in { from { transform: scale(0.62); opacity: 0; } }
+/* Fades out at the end of each turn so stopping mid-scan never pops */
+@keyframes iris-sweep {
+  0% { transform: rotate(0); opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: rotate(360deg); opacity: 0; }
+}
+
+@media (max-width: 420px) {
+  .hero { padding: 22px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iris-edge,
+  .iris-body,
+  .iris-fibers line,
+  .private-value { animation: none; }
+  .iris-sweep { display: none; }
+  .odo-reel,
+  .iris-arc,
+  .eye-logo-pupil,
+  .eye-icon-lid,
+  .eye-icon-pupil { transition: none; }
 }
 
 /* Mniejsza, szara część po przecinku (grosze/cents) */
@@ -762,28 +1006,7 @@ button:disabled {
   border-radius: var(--radius);
 }
 
-/* Dashboard — allocation bar */
-.alloc {
-  margin-top: 18px;
-}
-
-.alloc-bar {
-  display: flex;
-  gap: 3px;
-  height: 8px;
-  width: 100%;
-  border-radius: 99px;
-  overflow: hidden;
-  background: var(--border);
-}
-
-.alloc-seg {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 99px;
-  transition: width 0.4s ease;
-}
-
+/* Dashboard — allocation legend */
 .alloc-legend {
   list-style: none;
   padding: 0;

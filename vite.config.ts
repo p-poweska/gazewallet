@@ -40,6 +40,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+      // Fonts are self-hosted in public/fonts; precache them so the app looks the same offline.
+      workbox: { globPatterns: ['**/*.{js,wasm,css,html,woff2}'] },
       manifest: {
         name: 'gazewallet',
         short_name: 'gazewallet',

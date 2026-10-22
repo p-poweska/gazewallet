@@ -18,6 +18,7 @@ import { accountIdentity } from './lib/account-overlap'
 import { mergeAccounts, type BackupPayload } from './lib/backup'
 import { marketUpdatedAt, remainingPriceFreshness } from './lib/market-freshness'
 import { DATA_FRESHNESS_MS } from './lib/data-status'
+import { EyeLogo } from './components/EyeLogo'
 
 // CoinGecko ids for every supported chain — small list, fetched in one call.
 const COIN_IDS = ADAPTERS.map((a) => a.coingeckoId)
@@ -89,6 +90,7 @@ function AppContent() {
     [accounts, balanceQueries],
   )
   const history = usePortfolioHistory(views, markets, marketState, currency, dataEnvironment.online)
+  const busy = marketsQuery.isFetching || balanceQueries.some((q) => q.isFetching)
 
   function addAccount(input: string, label?: string): string | null {
     try {
@@ -138,7 +140,7 @@ function AppContent() {
       <main className="app">
         <header className="header">
           <Link to="/" className="brand">
-            <span className="logo" aria-hidden />
+            <EyeLogo closed={privacy.hidden} busy={busy} />
             <div>
               <h1>gazewallet</h1>
               <p className="subtitle">Watch-only · data stays local</p>
@@ -177,6 +179,7 @@ function AppContent() {
                 markets={markets}
                 currency={currency}
                 marketState={marketState}
+                scanning={busy}
                 dataEnvironment={dataEnvironment}
                 onAdd={addAccount}
                 backupSettings={{ currency, accent, privacyHidden: privacy.hidden }}
