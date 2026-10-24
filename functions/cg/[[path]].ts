@@ -17,7 +17,7 @@ function errorResponse(status: number, message: string): Response {
 }
 
 function canonicalParams(url: URL): URLSearchParams | null {
-  const allowed = ['vs_currency', 'ids', 'price_change_percentage']
+  const allowed = ['vs_currency', 'ids', 'price_change_percentage', 'sparkline']
   for (const key of url.searchParams.keys()) {
     if (!allowed.includes(key) || url.searchParams.getAll(key).length !== 1) return null
   }
@@ -30,7 +30,10 @@ function canonicalParams(url: URL): URLSearchParams | null {
     const requested = new Set(periods.split(',').map((period) => period.trim()))
     if (requested.size !== PERIODS.length || PERIODS.some((period) => !requested.has(period))) return null
   }
-  return new URLSearchParams({ vs_currency: currency, ids: ids.join(','), price_change_percentage: PERIODS.join(',') })
+  const sparkline = url.searchParams.get('sparkline')
+  if (sparkline !== null && sparkline !== 'true') return null
+  // Always fetch the 7-day sparkline so clients with and without it share one cache entry.
+  return new URLSearchParams({ vs_currency: currency, ids: ids.join(','), price_change_percentage: PERIODS.join(','), sparkline: 'true' })
 }
 
 function clientResponse(response: Response, status: 'HIT' | 'MISS' | 'BYPASS'): Response {

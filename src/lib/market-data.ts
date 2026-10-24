@@ -9,6 +9,23 @@ export interface CoinGeckoMarket {
   price_change_percentage_24h_in_currency: number | null
   price_change_percentage_7d_in_currency: number | null
   price_change_percentage_30d_in_currency: number | null
+  /** Downsampled 7-day price line (oldest first); absent when the provider sent none or invalid data. */
+  sparkline_7d?: number[]
+}
+
+/** CoinGecko's hourly 7-day series is ~168 points; every 4th hour is plenty for a card sparkline. */
+export const SPARKLINE_STEP = 4
+
+/**
+ * Validates and downsamples a price series (oldest first), always keeping the newest price.
+ * Sparklines are decorative: bad data drops the line instead of failing the prices.
+ */
+export function parseSparkline(prices: unknown, step = SPARKLINE_STEP): number[] | undefined {
+  if (!Array.isArray(prices) || prices.length < 2) return undefined
+  if (!prices.every((p) => typeof p === 'number' && Number.isFinite(p) && p >= 0)) return undefined
+  const points = prices.filter((_, i) => i % step === 0)
+  if ((prices.length - 1) % step !== 0) points.push(prices[prices.length - 1])
+  return points
 }
 
 /** Only complete, finite price data may enter either cache. Strip unrelated fields. */
@@ -26,7 +43,13 @@ export function parseMarketRows(input: unknown, ids: string[]): CoinGeckoMarket[
     if (typeof r.id !== 'string' || !ids.includes(r.id) || seen.has(r.id)) throw new Error('Invalid price asset')
     if (typeof r.current_price !== 'number' || !Number.isFinite(r.current_price) || r.current_price < 0) throw new Error('Invalid price')
     seen.add(r.id)
+    // Raw CoinGecko rows carry { price: [...] } hourly; proxied rows carry the already downsampled line.
+    const raw = r.sparkline_in_7d
+    const sparkline = raw !== undefined
+      ? parseSparkline(raw && typeof raw === 'object' && 'price' in raw ? raw.price : undefined)
+      : parseSparkline(r.sparkline_7d, 1)
     return {
+      ...(sparkline ? { sparkline_7d: sparkline } : {}),
       id: r.id,
       current_price: r.current_price,
       high_24h: nullableNumber(r.high_24h),

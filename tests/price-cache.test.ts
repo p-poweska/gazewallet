@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test, type TestContext } from 'node:test'
 import { onRequestGet } from '../functions/cg/[[path]].ts'
 import { fetchMarkets, type Markets } from '../src/lib/api.ts'
-import { PRICE_CACHE_SECONDS, PRICE_FETCHED_AT_HEADER } from '../src/lib/market-data.ts'
+import { parseSparkline, PRICE_CACHE_SECONDS, PRICE_FETCHED_AT_HEADER } from '../src/lib/market-data.ts'
 import { marketUpdatedAt, remainingPriceFreshness } from '../src/lib/market-freshness.ts'
 import { getDataStatus } from '../src/lib/data-status.ts'
 import { createSnapshot } from '../src/lib/history.ts'
@@ -193,4 +193,41 @@ test('upstream redirects are not followed, cached or reported as prices', async 
   assert.equal(h.upstream[0].init?.redirect, 'manual')
   assert.equal(h.calls(), 1)
   assert.equal(h.writes.length, 0)
+})
+
+test('7-day sparklines are downsampled, end on the newest price and never break prices', async (t) => {
+  const hourly = Array.from({ length: 168 }, (_, i) => 100 + i)
+  const line = parseSparkline(hourly)!
+  assert.equal(line.length, 43)
+  assert.equal(line[0], 100)
+  assert.equal(line.at(-1), 267)
+  assert.deepEqual(parseSparkline(line, 1), line)
+  for (const bad of [undefined, null, [], [1], [1, Number.NaN], [1, -2], 'x', { price: hourly }]) {
+    assert.equal(parseSparkline(bad), undefined)
+  }
+
+  const h = harness(t)
+  const withLines = rows.map((row) => ({ ...row, sparkline_in_7d: { price: hourly } }))
+  h.respond(() => Response.json([withLines[0], { ...withLines[1], sparkline_in_7d: { price: [1, null] } }]))
+  const response = await h.request(query + '&sparkline=true')
+  assert.equal(response.status, 200)
+  assert.equal(h.upstream[0].url.searchParams.get('sparkline'), 'true')
+  const body = await response.json() as Array<{ id: string; sparkline_7d?: number[] }>
+  assert.equal(body.find((r) => r.id === 'bitcoin')!.sparkline_7d!.length, 43)
+  assert.equal(body.find((r) => r.id === 'ethereum')!.sparkline_7d, undefined)
+  // Requests with and without the flag share one cache entry; other values are rejected.
+  assert.equal((await h.request()).headers.get('X-Price-Cache'), 'HIT')
+  assert.equal((await h.request(query + '&sparkline=false')).status, 400)
+  assert.equal(h.calls(), 1)
+})
+
+test('client keeps sparklines when present and works without them', async (t) => {
+  t.mock.method(Date, 'now', () => START)
+  t.mock.method(globalThis, 'fetch', async (url: string) => {
+    assert.match(url, /sparkline=true/)
+    return Response.json([{ ...rows[0], sparkline_7d: [1, 2, 3] }, rows[1]])
+  })
+  const data = await fetchMarkets('USD', ['bitcoin', 'ethereum'])
+  assert.deepEqual(data.bitcoin.sparkline7d, [1, 2, 3])
+  assert.equal(data.ethereum.sparkline7d, undefined)
 })

@@ -19,6 +19,7 @@ import { mergeAccounts, type BackupPayload } from './lib/backup'
 import { marketUpdatedAt, remainingPriceFreshness } from './lib/market-freshness'
 import { DATA_FRESHNESS_MS } from './lib/data-status'
 import { EyeLogo } from './components/EyeLogo'
+import { Sky } from './components/Sky'
 
 // CoinGecko ids for every supported chain — small list, fetched in one call.
 const COIN_IDS = ADAPTERS.map((a) => a.coingeckoId)
@@ -137,6 +138,7 @@ function AppContent() {
 
   return (
     <div className="page">
+      <Sky dim={!dataEnvironment.online || marketsQuery.isError} />
       <main className="app">
         <header className="header">
           <Link to="/" className="brand">

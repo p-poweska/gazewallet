@@ -39,6 +39,8 @@ export interface Market {
   change30d: number | null
   high24h: number | null
   low24h: number | null
+  /** 7-day price line for card sparklines; missing in older cached data. */
+  sparkline7d?: number[]
 }
 
 /** Keyed by CoinGecko id (e.g. 'bitcoin', 'ethereum'). */
@@ -48,7 +50,7 @@ export type Markets = Record<string, Market>
 export async function fetchMarkets(currency: string, ids: string[]): Promise<Markets> {
   const vs = currency.toLowerCase()
   const idsParam = encodeURIComponent(ids.join(','))
-  const url = `/cg/api/v3/coins/markets?vs_currency=${vs}&ids=${idsParam}&price_change_percentage=24h%2C7d%2C30d`
+  const url = `/cg/api/v3/coins/markets?vs_currency=${vs}&ids=${idsParam}&price_change_percentage=24h%2C7d%2C30d&sparkline=true`
   const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) throw new Error(`Price API error (${res.status})`)
   const arr = parseMarketRows(await res.json(), ids)
@@ -67,6 +69,7 @@ export async function fetchMarkets(currency: string, ids: string[]): Promise<Mar
       change30d: d.price_change_percentage_30d_in_currency,
       high24h: d.high_24h,
       low24h: d.low_24h,
+      ...(d.sparkline_7d ? { sparkline7d: d.sparkline_7d } : {}),
     }
   }
   return out

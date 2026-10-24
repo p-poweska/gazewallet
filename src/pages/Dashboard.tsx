@@ -18,6 +18,8 @@ import { PriceEffect } from '../components/PriceEffect'
 import { BackupControls } from '../components/BackupControls'
 import type { BackupPayload, BackupSettings } from '../lib/backup'
 import { IrisDial, type IrisSegment } from '../components/IrisDial'
+import { AssetMedallion } from '../components/AssetMedallion'
+import { sparklinePath } from '../lib/sparkline'
 
 interface Props {
   accent: string
@@ -81,15 +83,14 @@ export default function Dashboard({ accent, history, views, markets, currency, m
       <AddAccount views={views} onAdd={onAdd} />
 
       <div className="assets">
-        {groups.map((g) => {
+        {groups.map((g, i) => {
           const m = markets[g.adapter.coingeckoId]
           const groupStatus = getDataStatus([g], marketState, dataEnvironment.online, dataEnvironment.now)
+          const trend = m?.sparkline7d
           return (
             <Link key={g.adapter.id} to={`/app/${g.adapter.id}`} className="card asset-card">
               <div className="asset-head">
-                <span className="asset-icon" aria-hidden>
-                  {g.adapter.glyph}
-                </span>
+                <AssetMedallion glyph={g.adapter.glyph} color={allocShade(i)} />
                 <div className="asset-id">
                   <span className="asset-name">{g.adapter.name}</span>
                   <span className="asset-count">
@@ -110,6 +111,15 @@ export default function Dashboard({ accent, history, views, markets, currency, m
                   </PrivateValue>
                 </span>
               </div>
+              {trend && (
+                // Market price, not holdings, so it stays visible in privacy mode.
+                <div className="asset-trend">
+                  <svg className={`asset-spark ${trend[trend.length - 1] >= trend[0] ? 'up' : 'down'}`} viewBox="0 0 200 32" preserveAspectRatio="none" role="img" aria-label={`${g.adapter.name} price over the last 7 days`}>
+                    <path d={sparklinePath(trend, 200, 32)} vectorEffect="non-scaling-stroke" />
+                  </svg>
+                  <span className="asset-trend-label">7d price</span>
+                </div>
+              )}
               {!groupStatus.complete && <span className="data-status-warning">Partial valuation</span>}
               <DataStatus status={groupStatus} compact />
             </Link>

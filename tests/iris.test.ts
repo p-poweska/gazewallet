@@ -39,3 +39,10 @@ test('iris fibers are deterministic and stay between pupil and outer edge', () =
     assert.ok(f.opacity >= 0.35 && f.opacity <= 0.95)
   }
 })
+
+test('sparkline paths span the box, keep padding and centre flat series', async () => {
+  const { sparklinePath } = await import('../src/lib/sparkline.ts')
+  assert.equal(sparklinePath([1], 100, 20), '')
+  assert.equal(sparklinePath([0, 10], 100, 20, 2), 'M0.0,18.0L100.0,2.0')
+  assert.equal(sparklinePath([5, 5, 5], 100, 20), 'M0.0,10.0L50.0,10.0L100.0,10.0')
+})
