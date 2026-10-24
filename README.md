@@ -71,9 +71,9 @@ For that command, supply `CG_DEMO_KEY` in a local `.dev.vars` file (ignored by G
 ## Deploy to Cloudflare Pages
 
 1. Connect this repository to a **Pages** project, not a Workers project.
-2. Choose the branch to deploy. `develop` contains ongoing work; `main` is the stable line.
+2. Set `main` as the production branch. Other branches get preview deployments at `<branch>.<project>.pages.dev`.
 3. Set the build command to `npm run build` and output directory to `dist`, with the repository root as the project root. Use Node.js 22.12 or newer. `.node-version` selects the Node 22 line; remove any older `NODE_VERSION` override in the Pages settings.
-4. Add a secret named `CG_DEMO_KEY` in the Pages project's environment settings for Production and Preview as needed.
+4. Add a secret named `CG_DEMO_KEY` in the Pages project's environment settings for both Production and Preview. Without the Preview secret, branch previews answer price requests with 503.
 5. Create a new deployment after changing secrets. Existing deployments do not pick them up retroactively.
 
 Pages deploys `functions/` alongside the static build. No database is required. Keep `public/_headers`, `public/_redirects` and `wrangler.toml` in the project. Camera access and service workers require a secure context (HTTPS or localhost).
@@ -121,7 +121,7 @@ Prices powered by CoinGecko. Provider quotas and licensing terms apply independe
 [Report a bug](https://github.com/p-poweska/gazewallet/issues/new?template=bug_report.md) or [suggest a feature](https://github.com/p-poweska/gazewallet/issues/new?template=feature_request.md).
 Include reproduction steps, browser/device details and redacted screenshots when useful. GitHub Issues are public: never post XPUBs, seed phrases, private keys, API keys, backups or unredacted wallet data.
 
-For contributions, branch from `develop`, keep changes focused, and run `npm test` and `npm run build` before opening a pull request against `develop`.
+For contributions, branch from `main`, keep changes focused, and run `npm test` and `npm run build` before opening a pull request against `main`.
 
 ## License
 
