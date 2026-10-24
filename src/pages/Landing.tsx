@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import type { Markets } from '../lib/api'
 import type { Currency } from '../lib/currency'
 import { formatFiat } from '../lib/format'
@@ -56,6 +57,19 @@ const SAFETY: string[] = [
   'Open source, so anyone can audit exactly what it does.',
 ]
 
+// The one action this page exists for, so it gets the strongest treatment.
+function OpenWalletCta() {
+  return (
+    <div className="lp-cta">
+      <Link to="/app" className="primary btn-link cta-open">
+        Open your wallet
+        <ArrowRight className="cta-arrow" size={20} strokeWidth={2.4} aria-hidden="true" />
+      </Link>
+      <p className="cta-note">Free · no sign-up · nothing to install</p>
+    </div>
+  )
+}
+
 export default function Landing({ currency, markets }: Props) {
   const market = markets['bitcoin']
   return (
@@ -92,14 +106,7 @@ export default function Landing({ currency, markets }: Props) {
           )}
         </div>
 
-        <div className="lp-cta">
-          <Link to="/app" className="primary btn-link">
-            Open wallet
-          </Link>
-          <a className="ghost btn-link" href={GITHUB_URL} target="_blank" rel="noreferrer">
-            View on GitHub
-          </a>
-        </div>
+        <OpenWalletCta />
       </section>
 
       <section className="lp-section">
@@ -138,6 +145,11 @@ export default function Landing({ currency, markets }: Props) {
         </ul>
       </section>
 
+      <section className="lp-section lp-closing">
+        <h2>See your portfolio in a minute</h2>
+        <OpenWalletCta />
+      </section>
+
       <section className="lp-section lp-os card">
         <div>
           <h2>Open source</h2>
@@ -147,15 +159,9 @@ export default function Landing({ currency, markets }: Props) {
           </p>
         </div>
         <a className="ghost btn-link" href={GITHUB_URL} target="_blank" rel="noreferrer">
-          GitHub
+          View on GitHub
         </a>
       </section>
-
-      <div className="lp-cta lp-cta-bottom">
-        <Link to="/app" className="primary btn-link">
-          Open wallet
-        </Link>
-      </div>
     </div>
   )
 }
