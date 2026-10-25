@@ -207,6 +207,9 @@ function AppContent() {
           />
         </Routes>
         <footer className="site-footer">
+          <a className="author-credit" href="https://poweska.dev/" target="_blank" rel="noopener noreferrer" aria-label="Built by Paweł Powęska (opens in a new tab)">
+            Built by Paweł Powęska
+          </a>
           <a href="https://github.com/p-poweska/gazewallet/issues/new/choose" target="_blank" rel="noopener noreferrer">
             <MessageSquare size={15} aria-hidden="true" />
             Report a bug or suggest a feature

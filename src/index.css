@@ -127,6 +127,11 @@ body::after {
 
 .site-footer svg { flex-shrink: 0; }
 
+.site-footer .author-credit {
+  flex-basis: 100%;
+  min-height: 44px;
+}
+
 /* Header */
 .header {
   display: flex;
